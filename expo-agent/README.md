@@ -105,8 +105,44 @@ initNetworkAgent({
 
   // Maximum body snippet length (optional, default: 3000)
   maxBodyLength: 3000,
+
+  // Enable detailed logging (optional, default: false)
+  // When false, only critical errors are logged
+  // When true, all network activity is logged
+  debug: false,
 });
 ```
+
+### Debug Mode
+
+By default, the agent runs in **silent mode** and only logs critical errors. To see detailed logs of all network activity:
+
+```typescript
+// Silent mode (default) - only critical errors
+initNetworkAgent({
+  wsUrl: "ws://192.168.1.100:5051",
+});
+
+// Debug mode - detailed logging
+initNetworkAgent({
+  wsUrl: "ws://192.168.1.100:5051",
+  debug: true,
+});
+```
+
+**Debug logs include:**
+
+- Connection status
+- Health checks (every 10 seconds)
+- Request/response capturing
+- Metadata tracking
+- Interceptor setup
+
+**Always logged (even in silent mode):**
+
+- WebSocket connection errors
+- Request/response errors
+- Critical failures
 
 ## Troubleshooting
 
@@ -119,9 +155,11 @@ initNetworkAgent({
 
 ### Requests not showing up
 
-- Check for the "[NetworkAgent] Connected to inspector" message in the console
+- Enable debug mode to see detailed logs: `debug: true`
+- Check for the "[NetworkAgent] Connected to inspector" message in the console (requires debug mode)
 - Make sure you are in `__DEV__` mode
 - Make sure the agent is initialized correctly
+- Verify the desktop inspector app is running
 
 ### Body not showing up
 

@@ -1,6 +1,6 @@
 {
   "name": "rexpo-debugger",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "Network debugging tool for Expo and React Native apps. Inspect all network traffic in real-time with Chrome DevTools-like UI.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

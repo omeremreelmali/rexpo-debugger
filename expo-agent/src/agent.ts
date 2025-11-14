@@ -48,18 +48,37 @@ export type InitOptions = {
   enabled?: boolean;
   /** Maximum body snippet length (default: 3000) */
   maxBodyLength?: number;
+  /** Enable detailed logging (default: false) */
+  debug?: boolean;
 };
 
 let initialized = false;
 let socket: WebSocket | null = null;
 let healthCheckInterval: any = null;
 let maxBodyLength = 3000;
+let debugMode = false;
 
 // Metadata storage - use config object as key
 const requestMetadataMap = new WeakMap<
   any,
   { id: string; startedAt: string; startTime: number }
 >();
+
+/**
+ * Log helper - only logs in debug mode
+ */
+function debugLog(...args: any[]) {
+  if (debugMode) {
+    console.log(...args);
+  }
+}
+
+/**
+ * Error log helper - always logs (critical errors)
+ */
+function errorLog(...args: any[]) {
+  console.log(...args);
+}
 
 /**
  * Initializes the network agent and overrides global.fetch
@@ -71,15 +90,16 @@ export function initNetworkAgent(options: InitOptions) {
   }
 
   if (initialized) {
-    console.log("[NetworkAgent] Already initialized");
+    debugLog("[NetworkAgent] Already initialized");
     return;
   }
 
-  const { wsUrl, enabled = true } = options;
+  const { wsUrl, enabled = true, debug = false } = options;
   maxBodyLength = options.maxBodyLength || 3000;
+  debugMode = debug;
 
   if (!enabled) {
-    console.log("[NetworkAgent] Disabled by config");
+    debugLog("[NetworkAgent] Disabled by config");
     return;
   }
 
@@ -87,37 +107,39 @@ export function initNetworkAgent(options: InitOptions) {
 
   // Establish WebSocket connection
   try {
-    console.log("[NetworkAgent] 🔄 Connecting to inspector:", wsUrl);
+    debugLog("[NetworkAgent] 🔄 Connecting to inspector:", wsUrl);
     socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      console.log("[NetworkAgent] ✅ Connected to inspector:", wsUrl);
-      console.log("[NetworkAgent] 🟢 Socket state: OPEN (readyState: 1)");
+      debugLog("[NetworkAgent] ✅ Connected to inspector:", wsUrl);
+      debugLog("[NetworkAgent] 🟢 Socket state: OPEN (readyState: 1)");
 
-      // Health check - check socket status every 10 seconds
+      // Health check - check socket status every 10 seconds (only in debug mode)
       if (healthCheckInterval) clearInterval(healthCheckInterval);
-      healthCheckInterval = setInterval(() => {
-        if (socket) {
-          const states = ["CONNECTING", "OPEN", "CLOSING", "CLOSED"];
-          const stateStr = states[socket.readyState] || "UNKNOWN";
-          console.log(
-            `[NetworkAgent] 💚 Health check - Socket: ${stateStr} (${socket.readyState})`
-          );
-        }
-      }, 10000);
+      if (debugMode) {
+        healthCheckInterval = setInterval(() => {
+          if (socket) {
+            const states = ["CONNECTING", "OPEN", "CLOSING", "CLOSED"];
+            const stateStr = states[socket.readyState] || "UNKNOWN";
+            debugLog(
+              `[NetworkAgent] 💚 Health check - Socket: ${stateStr} (${socket.readyState})`
+            );
+          }
+        }, 10000);
+      }
     };
 
     socket.onerror = (e) => {
-      console.log("[NetworkAgent] ❌ WebSocket error:", e);
-      console.log(
+      errorLog("[NetworkAgent] ❌ WebSocket error:", e);
+      debugLog(
         "[NetworkAgent] 🔍 Current socket state:",
         socket?.readyState
       );
     };
 
     socket.onclose = (e) => {
-      console.log("[NetworkAgent] 🔌 Disconnected from inspector");
-      console.log("[NetworkAgent] 🔍 Close code:", e.code, "reason:", e.reason);
+      debugLog("[NetworkAgent] 🔌 Disconnected from inspector");
+      debugLog("[NetworkAgent] 🔍 Close code:", e.code, "reason:", e.reason);
 
       if (healthCheckInterval) {
         clearInterval(healthCheckInterval);
@@ -128,7 +150,7 @@ export function initNetworkAgent(options: InitOptions) {
       // Optional: Auto-reconnect logic can be added
     };
   } catch (error) {
-    console.error("[NetworkAgent] ❌ Failed to create WebSocket:", error);
+    errorLog("[NetworkAgent] ❌ Failed to create WebSocket:", error);
     return;
   }
 
@@ -160,7 +182,7 @@ export function initNetworkAgent(options: InitOptions) {
       : undefined;
 
     // Send request message
-    console.log(
+    debugLog(
       `[NetworkAgent] 🚀 Capturing ${method} request:`,
       url.substring(0, 80)
     );
@@ -186,7 +208,7 @@ export function initNetworkAgent(options: InitOptions) {
       try {
         responseText = await clone.text();
       } catch (readError) {
-        console.log("[NetworkAgent] Failed to read response body:", readError);
+        debugLog("[NetworkAgent] Failed to read response body:", readError);
       }
 
       const durationMs = Date.now() - startTime;
@@ -195,7 +217,7 @@ export function initNetworkAgent(options: InitOptions) {
       const responseHeaders = normalizeHeaders(response.headers);
 
       // Send response message
-      console.log(
+      debugLog(
         `[NetworkAgent] 📥 Capturing response: ${response.status} (${durationMs}ms)`
       );
       safeSend(socket, {
@@ -216,7 +238,7 @@ export function initNetworkAgent(options: InitOptions) {
       // Send response message in case of error
       const durationMs = Date.now() - startTime;
 
-      console.log(`[NetworkAgent] ❌ Request failed:`, err?.message || err);
+      errorLog(`[NetworkAgent] ❌ Request failed:`, err?.message || err);
       safeSend(socket, {
         type: "response",
         id,
@@ -242,10 +264,10 @@ export function initNetworkAgent(options: InitOptions) {
     const axios = (global as any).axios;
 
     if (axios && axios.interceptors) {
-      console.log("[NetworkAgent] 🔧 Setting up Axios interceptors");
+      debugLog("[NetworkAgent] 🔧 Setting up Axios interceptors");
 
       // Log existing interceptor count
-      console.log("[NetworkAgent] 📊 Existing interceptors (global):", {
+      debugLog("[NetworkAgent] 📊 Existing interceptors (global):", {
         requestCount: (axios.interceptors.request as any).handlers?.length || 0,
         responseCount:
           (axios.interceptors.response as any).handlers?.length || 0,
@@ -255,7 +277,7 @@ export function initNetworkAgent(options: InitOptions) {
       axios.interceptors.request.use(
         (config: any) => {
           if (!config) {
-            console.log(
+            debugLog(
               "[NetworkAgent] ⚠️ Empty config in axios request interceptor"
             );
             return config;
@@ -278,7 +300,7 @@ export function initNetworkAgent(options: InitOptions) {
           const fullUrl = config.baseURL ? `${config.baseURL}${url}` : url;
           const method = (config.method || "GET").toUpperCase();
 
-          console.log(
+          debugLog(
             `[NetworkAgent] 🚀 [AXIOS] Capturing ${method} request:`,
             fullUrl.substring(0, 80)
           );
@@ -298,7 +320,7 @@ export function initNetworkAgent(options: InitOptions) {
           return config;
         },
         (error: any) => {
-          console.log("[NetworkAgent] ❌ [AXIOS] Request error:", error);
+          errorLog("[NetworkAgent] ❌ [AXIOS] Request error:", error);
           return Promise.reject(error);
         }
       );
@@ -306,12 +328,12 @@ export function initNetworkAgent(options: InitOptions) {
       // Response interceptor
       axios.interceptors.response.use(
         (response: any) => {
-          console.log(
+          debugLog(
             "[NetworkAgent] 🔍 [AXIOS] Response interceptor triggered (global)"
           );
 
           if (!response) {
-            console.log(
+            debugLog(
               "[NetworkAgent] ⚠️ [AXIOS] No response object (global)"
             );
             return response;
@@ -338,7 +360,7 @@ export function initNetworkAgent(options: InitOptions) {
               response.config.headers["X-Network-Inspector-ID"]
             ) {
               id = response.config.headers["X-Network-Inspector-ID"];
-              console.log(
+              debugLog(
                 "[NetworkAgent] 🔄 Recovered ID from request header (global):",
                 id
               );
@@ -353,19 +375,19 @@ export function initNetworkAgent(options: InitOptions) {
             response.headers["x-network-inspector-id"]
           ) {
             id = response.headers["x-network-inspector-id"];
-            console.log(
+            debugLog(
               "[NetworkAgent] 🔄 Recovered ID from response header (global):",
               id
             );
           }
 
           if (!response.config) {
-            console.log(
+            debugLog(
               "[NetworkAgent] ⚠️ [AXIOS] Response.config missing (global), ID recovered:",
               !!id
             );
             if (!id) {
-              console.log(
+              debugLog(
                 "[NetworkAgent] 📊 Orphan response - cannot track (global):",
                 {
                   status: response.status,
@@ -384,7 +406,7 @@ export function initNetworkAgent(options: InitOptions) {
 
           const startedAt = metadata?.startedAt;
 
-          console.log("[NetworkAgent] 🔍 [AXIOS] Response metadata (global):", {
+          debugLog("[NetworkAgent] 🔍 [AXIOS] Response metadata (global):", {
             hasId: !!id,
             hasMetadata: !!metadata,
             fromWeakMap: response.config
@@ -401,7 +423,7 @@ export function initNetworkAgent(options: InitOptions) {
               ? `${response.config.baseURL}${url}`
               : url;
 
-            console.log(
+            debugLog(
               `[NetworkAgent] 📥 [AXIOS] Capturing response: ${response.status} (${durationMs}ms)`
             );
 
@@ -446,7 +468,7 @@ export function initNetworkAgent(options: InitOptions) {
               ? `${error.config.baseURL}${url}`
               : url;
 
-            console.log(
+            errorLog(
               `[NetworkAgent] ❌ [AXIOS] Request failed:`,
               error.message
             );
@@ -485,7 +507,7 @@ export function initNetworkAgent(options: InitOptions) {
           const ourHandler = responseHandlers.pop();
           if (ourHandler) {
             responseHandlers.unshift(ourHandler);
-            console.log(
+            debugLog(
               "[NetworkAgent] 🔄 Moved response interceptor to front (global)"
             );
           }
@@ -497,25 +519,25 @@ export function initNetworkAgent(options: InitOptions) {
           const ourHandler = requestHandlers.pop();
           if (ourHandler) {
             requestHandlers.unshift(ourHandler);
-            console.log(
+            debugLog(
               "[NetworkAgent] 🔄 Moved request interceptor to front (global)"
             );
           }
         }
       } catch (e) {
-        console.log(
+        debugLog(
           "[NetworkAgent] ⚠️ Could not reorder interceptors (global):",
           e
         );
       }
 
-      console.log("[NetworkAgent] ✅ Axios interceptors configured");
+      debugLog("[NetworkAgent] ✅ Axios interceptors configured");
     }
   } catch (axiosError) {
-    console.log("[NetworkAgent] ℹ️ Axios not found, using fetch-only mode");
+    debugLog("[NetworkAgent] ℹ️ Axios not found, using fetch-only mode");
   }
 
-  console.log("[NetworkAgent] 🔍 Network monitoring started");
+  debugLog("[NetworkAgent] 🔍 Network monitoring started");
 }
 
 /**
@@ -523,12 +545,12 @@ export function initNetworkAgent(options: InitOptions) {
  */
 function safeSend(ws: WebSocket | null, payload: NetworkMessage) {
   if (!ws) {
-    console.log("[NetworkAgent] ❌ Socket is null, cannot send", payload.type);
+    errorLog("[NetworkAgent] ❌ Socket is null, cannot send", payload.type);
     return;
   }
 
   if (ws.readyState !== WebSocket.OPEN) {
-    console.log(
+    errorLog(
       "[NetworkAgent] ❌ Socket not open (state:",
       ws.readyState,
       "), cannot send",
@@ -540,12 +562,12 @@ function safeSend(ws: WebSocket | null, payload: NetworkMessage) {
   try {
     const message = JSON.stringify(payload);
     ws.send(message);
-    console.log(
+    debugLog(
       `[NetworkAgent] ✅ Sent ${payload.type} for:`,
       payload.url.substring(0, 60) + "..."
     );
   } catch (e) {
-    console.log("[NetworkAgent] ❌ Send error:", e);
+    errorLog("[NetworkAgent] ❌ Send error:", e);
   }
 }
 
@@ -634,14 +656,14 @@ function createTextSnippet(text: string, maxLen: number): string {
  */
 export function addAxiosInstance(axiosInstance: any) {
   if (!axiosInstance || !axiosInstance.interceptors) {
-    console.log("[NetworkAgent] ❌ Invalid axios instance");
+    errorLog("[NetworkAgent] ❌ Invalid axios instance");
     return;
   }
 
-  console.log("[NetworkAgent] 🔧 Adding interceptors to custom axios instance");
+  debugLog("[NetworkAgent] 🔧 Adding interceptors to custom axios instance");
 
   // Log existing interceptor count
-  console.log("[NetworkAgent] 📊 Existing interceptors:", {
+  debugLog("[NetworkAgent] 📊 Existing interceptors:", {
     requestCount:
       (axiosInstance.interceptors.request as any).handlers?.length || 0,
     responseCount:
@@ -652,7 +674,7 @@ export function addAxiosInstance(axiosInstance: any) {
   axiosInstance.interceptors.request.use(
     (config: any) => {
       if (!config) {
-        console.log(
+        debugLog(
           "[NetworkAgent] ⚠️ Empty config in axios request interceptor"
         );
         return config;
@@ -675,7 +697,7 @@ export function addAxiosInstance(axiosInstance: any) {
       const fullUrl = config.baseURL ? `${config.baseURL}${url}` : url;
       const method = (config.method || "GET").toUpperCase();
 
-      console.log(
+      debugLog(
         `[NetworkAgent] 🚀 [AXIOS] Capturing ${method} request:`,
         fullUrl.substring(0, 80)
       );
@@ -695,7 +717,7 @@ export function addAxiosInstance(axiosInstance: any) {
       return config;
     },
     (error: any) => {
-      console.log("[NetworkAgent] ❌ [AXIOS] Request error:", error);
+      errorLog("[NetworkAgent] ❌ [AXIOS] Request error:", error);
       return Promise.reject(error);
     }
   );
@@ -703,14 +725,14 @@ export function addAxiosInstance(axiosInstance: any) {
   // Response interceptor
   axiosInstance.interceptors.response.use(
     (response: any) => {
-      console.log("[NetworkAgent] 🔍 [AXIOS] Response interceptor triggered");
-      console.log(
+      debugLog("[NetworkAgent] 🔍 [AXIOS] Response interceptor triggered");
+      debugLog(
         "[NetworkAgent] 🔍 Response object keys:",
         Object.keys(response || {})
       );
 
       if (!response) {
-        console.log("[NetworkAgent] ⚠️ [AXIOS] No response object");
+        debugLog("[NetworkAgent] ⚠️ [AXIOS] No response object");
         return response;
       }
 
@@ -735,7 +757,7 @@ export function addAxiosInstance(axiosInstance: any) {
           response.config.headers["X-Network-Inspector-ID"]
         ) {
           id = response.config.headers["X-Network-Inspector-ID"];
-          console.log(
+          debugLog(
             "[NetworkAgent] 🔄 Recovered ID from request header:",
             id
           );
@@ -750,16 +772,16 @@ export function addAxiosInstance(axiosInstance: any) {
         response.headers["x-network-inspector-id"]
       ) {
         id = response.headers["x-network-inspector-id"];
-        console.log("[NetworkAgent] 🔄 Recovered ID from response header:", id);
+        debugLog("[NetworkAgent] 🔄 Recovered ID from response header:", id);
       }
 
       if (!response.config) {
-        console.log(
+        debugLog(
           "[NetworkAgent] ⚠️ [AXIOS] Response.config missing, ID recovered:",
           !!id
         );
         if (!id) {
-          console.log("[NetworkAgent] 📊 Orphan response - cannot track:", {
+          debugLog("[NetworkAgent] 📊 Orphan response - cannot track:", {
             status: response.status,
             hasData: !!response.data,
           });
@@ -775,7 +797,7 @@ export function addAxiosInstance(axiosInstance: any) {
 
       const startedAt = metadata?.startedAt;
 
-      console.log("[NetworkAgent] 🔍 [AXIOS] Response metadata:", {
+      debugLog("[NetworkAgent] 🔍 [AXIOS] Response metadata:", {
         hasId: !!id,
         hasMetadata: !!metadata,
         fromWeakMap: response.config
@@ -792,7 +814,7 @@ export function addAxiosInstance(axiosInstance: any) {
           ? `${response.config.baseURL}${url}`
           : url;
 
-        console.log(
+        debugLog(
           `[NetworkAgent] 📥 [AXIOS] Capturing response: ${response.status} (${durationMs}ms)`
         );
 
@@ -835,7 +857,7 @@ export function addAxiosInstance(axiosInstance: any) {
           ? `${error.config.baseURL}${url}`
           : url;
 
-        console.log(`[NetworkAgent] ❌ [AXIOS] Request failed:`, error.message);
+        errorLog(`[NetworkAgent] ❌ [AXIOS] Request failed:`, error.message);
 
         safeSend(socket, {
           type: "response",
@@ -872,7 +894,7 @@ export function addAxiosInstance(axiosInstance: any) {
       const ourHandler = responseHandlers.pop();
       if (ourHandler) {
         responseHandlers.unshift(ourHandler);
-        console.log("[NetworkAgent] 🔄 Moved response interceptor to front");
+        debugLog("[NetworkAgent] 🔄 Moved response interceptor to front");
       }
     }
 
@@ -883,12 +905,12 @@ export function addAxiosInstance(axiosInstance: any) {
       const ourHandler = requestHandlers.pop();
       if (ourHandler) {
         requestHandlers.unshift(ourHandler);
-        console.log("[NetworkAgent] 🔄 Moved request interceptor to front");
+        debugLog("[NetworkAgent] 🔄 Moved request interceptor to front");
       }
     }
   } catch (e) {
-    console.log("[NetworkAgent] ⚠️ Could not reorder interceptors:", e);
+    debugLog("[NetworkAgent] ⚠️ Could not reorder interceptors:", e);
   }
 
-  console.log("[NetworkAgent] ✅ Custom axios instance configured");
+  debugLog("[NetworkAgent] ✅ Custom axios instance configured");
 }
