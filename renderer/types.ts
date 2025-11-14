@@ -1,0 +1,46 @@
+// Shared types for renderer
+
+export type NetworkMessage =
+  | {
+      type: "request";
+      id: string;
+      url: string;
+      method: string;
+      requestHeaders?: Record<string, string>;
+      requestBodySnippet?: string;
+      startedAt: string;
+    }
+  | {
+      type: "response";
+      id: string;
+      url: string;
+      status: number;
+      statusText?: string;
+      responseHeaders?: Record<string, string>;
+      responseBodySnippet?: string;
+      durationMs: number;
+      finishedAt: string;
+      isError: boolean;
+      errorMessage?: string;
+    };
+
+export interface RequestState {
+  id: string;
+  url: string;
+  method: string;
+  status?: number;
+  statusText?: string;
+  requestHeaders?: Record<string, string>;
+  responseHeaders?: Record<string, string>;
+  requestBodySnippet?: string;
+  responseBodySnippet?: string;
+  durationMs?: number;
+  startedAt: string;
+  finishedAt?: string;
+  isError?: boolean;
+  errorMessage?: string;
+}
+
+export type FilterMethod = "ALL" | "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+export type FilterStatus = "ALL" | "2xx" | "3xx" | "4xx" | "5xx" | "ERR";
+

@@ -1,0 +1,54 @@
+{
+  "name": "rexpo-debugger",
+  "version": "1.0.0",
+  "description": "Network debugging tool for Expo and React Native apps. Inspect all network traffic in real-time with Chrome DevTools-like UI.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "expo",
+    "react-native",
+    "network",
+    "debugging",
+    "inspector",
+    "devtools",
+    "axios",
+    "fetch",
+    "websocket",
+    "hermes",
+    "flipper",
+    "chrome-devtools",
+    "network-monitor",
+    "http-inspector"
+  ],
+  "author": "Ömer Emre Elmalı <omeremreelma@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omeremreelmali/rexpo-debugger.git"
+  },
+  "bugs": {
+    "url": "https://github.com/omeremreelmali/rexpo-debugger/issues"
+  },
+  "homepage": "https://github.com/omeremreelmali/rexpo-debugger#readme",
+  "peerDependencies": {
+    "react-native": ">=0.60.0"
+  },
+  "devDependencies": {
+    "@types/react-native": "^0.72.0",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

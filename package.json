@@ -1,0 +1,81 @@
+{
+  "name": "expo-network-inspector",
+  "version": "1.0.0",
+  "description": "Flipper-like network inspector for Expo/React Native apps",
+  "main": "dist/electron/main.js",
+  "type": "commonjs",
+  "author": "Ömer Emre Elmalı <omeremreelma@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omeremreelmali/rexpo-debugger.git"
+  },
+  "bugs": {
+    "url": "https://github.com/omeremreelmali/rexpo-debugger/issues"
+  },
+  "homepage": "https://github.com/omeremreelmali/rexpo-debugger#readme",
+  "keywords": [
+    "expo",
+    "react-native",
+    "network",
+    "debugging",
+    "inspector",
+    "electron",
+    "devtools",
+    "websocket",
+    "fetch",
+    "axios",
+    "flipper-alternative",
+    "network-monitor"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && electron .",
+    "build": "npm run build:renderer && npm run build:electron",
+    "build:renderer": "vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "package": "npm run build && electron-builder",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@types/ws": "^8.5.8",
+    "@vitejs/plugin-react": "^4.2.0",
+    "concurrently": "^8.2.2",
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.exponetworkinspector.app",
+    "productName": "Rexpo Network Inspector",
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
+

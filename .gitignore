@@ -1,0 +1,32 @@
+node_modules
+dist
+release
+.DS_Store
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Testing
+coverage
+.nyc_output
+
+# Build artifacts
+*.tsbuildinfo
+
+# OS
+Thumbs.db
+
+# Certificates
+*.key
+*.pem
+*.cert
+
