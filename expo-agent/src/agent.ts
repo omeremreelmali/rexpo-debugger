@@ -768,7 +768,7 @@ export function addAxiosInstance(axiosInstance: any) {
         }
       }
 
-      // Metadata'dan değerleri al
+      // Get values from metadata
       if (metadata) {
         if (!id) id = metadata.id;
         if (!startTime) startTime = metadata.startTime;

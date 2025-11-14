@@ -115,13 +115,13 @@ App.tsx
 │   │   ├── Status Filter
 │   │   └── Pause/Clear Buttons
 │   │
-│   ├── NetworkTable (Sol Panel)
+│   ├── NetworkTable (Left Panel)
 │   │   └── Request Rows
 │   │       ├── Method Badge
 │   │       ├── Status Badge
 │   │       └── URL/Duration/Time
 │   │
-│   └── RequestDetails (Sağ Panel)
+│   └── RequestDetails (Right Panel)
 │       └── Tabs
 │           ├── Overview
 │           ├── Headers
