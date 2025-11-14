@@ -1,5 +1,13 @@
 # 🔍 Rexpo Debugger
 
+<div align="center">
+
+[![npm version](https://badge.fury.io/js/rexpo-debugger.svg)](https://www.npmjs.com/package/rexpo-debugger)
+[![Downloads](https://img.shields.io/npm/dm/rexpo-debugger.svg)](https://www.npmjs.com/package/rexpo-debugger)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
+
 A professional debugging tool similar to **Flipper** and **Chrome DevTools** for your Expo and React Native applications. Monitor network traffic **and** console logs in real-time!
 
 <img width="1400" alt="Rexpo Debugger" src="./assets/debug-screenshot.png">
@@ -46,9 +54,50 @@ This project consists of two main components:
 
 ## 📦 Installation
 
-### 1. Install the Inspector Application
+### 1. Install the npm package (Recommended)
+
+The easiest way to get started is to install the package from npm:
 
 ```bash
+# npm
+npm install --save-dev rexpo-debugger
+
+# yarn
+yarn add -D rexpo-debugger
+
+# pnpm
+pnpm add -D rexpo-debugger
+```
+
+Then initialize in your Expo app:
+
+```typescript
+// App.tsx
+import { initNetworkAgent, initConsoleAgent } from "rexpo-debugger";
+
+if (__DEV__) {
+  initNetworkAgent({
+    wsUrl: "ws://192.168.1.100:5051", // Your computer's IP
+    enabled: true,
+  });
+
+  initConsoleAgent({
+    wsUrl: "ws://192.168.1.100:5051",
+    enabled: true,
+    captureStackTrace: true,
+  });
+}
+```
+
+> 📦 **npm package**: [rexpo-debugger](https://www.npmjs.com/package/rexpo-debugger)
+
+### 2. Install the Desktop Inspector Application
+
+```bash
+# Clone the repository
+git clone https://github.com/omeremreelmali/rexpo-debugger.git
+cd rexpo-debugger
+
 # Install dependencies
 npm install
 
@@ -60,9 +109,9 @@ npm run build
 npm run package
 ```
 
-### 2. Integrate the Expo Agents
+### 3. (Alternative) Manual Integration
 
-Copy the agent files to your Expo project:
+If you prefer not to use the npm package, copy the agent files to your Expo project:
 
 ```bash
 # In your Expo project
@@ -93,7 +142,7 @@ if (__DEV__) {
 
 > 💡 **Tip**: You can enable one or both agents based on your needs!
 
-### 3. Find Your Local IP Address
+### 4. Find Your Local IP Address
 
 **macOS / Linux:**
 

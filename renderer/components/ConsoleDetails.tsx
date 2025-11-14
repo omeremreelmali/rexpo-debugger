@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
+import { JsonViewer, TextViewer } from "./JsonViewer";
 import "./ConsoleDetails.css";
 
 export function ConsoleDetails() {
@@ -42,7 +43,11 @@ export function ConsoleDetails() {
               <div key={index} className="console-arg">
                 <div className="console-arg-index">[{index}]</div>
                 <div className="console-arg-value">
-                  <pre>{formatArgument(arg)}</pre>
+                  {isJsonLike(arg) ? (
+                    <JsonViewer data={JSON.stringify(arg)} />
+                  ) : (
+                    <TextViewer data={formatArgument(arg)} />
+                  )}
                 </div>
               </div>
             ))}
@@ -63,7 +68,7 @@ export function ConsoleDetails() {
         <div className="console-details-section">
           <div className="console-details-section-title">Raw Data</div>
           <div className="console-details-section-content">
-            <pre>{JSON.stringify(selectedLog, null, 2)}</pre>
+            <JsonViewer data={JSON.stringify(selectedLog)} />
           </div>
         </div>
       </div>
@@ -80,9 +85,14 @@ function formatTimestamp(timestamp: string): string {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    fractionalSecondDigits: 3,
     hour12: false,
   });
+}
+
+function isJsonLike(arg: any): boolean {
+  if (!arg || typeof arg !== "object") return false;
+  if (arg.__type) return false; // Special types
+  return true;
 }
 
 function formatArgument(arg: any): string {
@@ -118,4 +128,3 @@ function formatArgument(arg: any): string {
 
   return String(arg);
 }
-

@@ -5,11 +5,13 @@ Professional debugging tool for Expo and React Native apps. Inspect network traf
 ## ✨ Features
 
 ### Network Monitoring
+
 - ✅ **fetch API** (native, automatically captured)
 - ✅ **axios** (with interceptors, automatically detected)
 - ✅ Custom axios instances (via `addAxiosInstance()`)
 
 ### Console Monitoring (NEW! 🎉)
+
 - ✅ **All console methods** (log, warn, error, info, debug)
 - ✅ **Stack traces** for errors and warnings
 - ✅ **Rich formatting** (objects, arrays, errors, dates, etc.)
@@ -64,10 +66,10 @@ if (__DEV__) {
 If you use custom axios instances:
 
 ```typescript
-import { 
-  initNetworkAgent, 
-  initConsoleAgent, 
-  addAxiosInstance 
+import {
+  initNetworkAgent,
+  initConsoleAgent,
+  addAxiosInstance,
 } from "rexpo-debugger";
 import { apiClient } from "./api/client"; // Your custom axios instance
 

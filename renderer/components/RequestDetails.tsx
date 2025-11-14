@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { generateCurlCommand, copyToClipboard } from "../utils/curlGenerator";
+import { JsonViewer, TextViewer } from "./JsonViewer";
 import "./RequestDetails.css";
 
 type Tab = "overview" | "headers" | "request" | "response" | "timing";
@@ -172,11 +173,11 @@ export function RequestDetails() {
           <div className="details-section">
             <h3>Request Body</h3>
             {selectedRequest.requestBodySnippet ? (
-              <pre className="code-block">
-                {isJson(selectedRequest.requestBodySnippet)
-                  ? formatJson(selectedRequest.requestBodySnippet)
-                  : selectedRequest.requestBodySnippet}
-              </pre>
+              isJson(selectedRequest.requestBodySnippet) ? (
+                <JsonViewer data={selectedRequest.requestBodySnippet} />
+              ) : (
+                <TextViewer data={selectedRequest.requestBodySnippet} />
+              )
             ) : (
               <p className="empty-message">No request body</p>
             )}
@@ -187,11 +188,11 @@ export function RequestDetails() {
           <div className="details-section">
             <h3>Response Body</h3>
             {selectedRequest.responseBodySnippet ? (
-              <pre className="code-block">
-                {isJson(selectedRequest.responseBodySnippet)
-                  ? formatJson(selectedRequest.responseBodySnippet)
-                  : selectedRequest.responseBodySnippet}
-              </pre>
+              isJson(selectedRequest.responseBodySnippet) ? (
+                <JsonViewer data={selectedRequest.responseBodySnippet} />
+              ) : (
+                <TextViewer data={selectedRequest.responseBodySnippet} />
+              )
             ) : (
               <p className="empty-message">No response body yet</p>
             )}

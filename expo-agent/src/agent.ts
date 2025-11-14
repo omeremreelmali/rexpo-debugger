@@ -55,7 +55,7 @@ export type InitOptions = {
 let initialized = false;
 let socket: WebSocket | null = null;
 let healthCheckInterval: any = null;
-let maxBodyLength = 3000;
+let maxBodyLength = Infinity;
 let debugMode = false;
 
 // Metadata storage - use config object as key
