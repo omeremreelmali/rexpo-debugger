@@ -16,7 +16,6 @@
  * }
  * ```
  */
-import axios from "axios";
 
 type NetworkMessage =
   | {
@@ -239,7 +238,8 @@ export function initNetworkAgent(options: InitOptions) {
 
   // ⭐ ADD AXIOS INTERCEPTOR (if available)
   try {
-    // Dynamically import Axios
+    // Try to get axios from global scope (if user has imported it)
+    const axios = (global as any).axios;
 
     if (axios && axios.interceptors) {
       console.log("[NetworkAgent] 🔧 Setting up Axios interceptors");

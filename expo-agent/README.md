@@ -1,45 +1,69 @@
-# Expo Network Agent
+# Rexpo Debugger - Network Agent
 
-This folder contains the network agent file to be used in your Expo application.
+Network debugging tool for Expo and React Native apps. Inspect all network traffic in real-time with Chrome DevTools-like UI.
 
 ## ✨ Supported HTTP Libraries
 
-- ✅ **fetch API** (native)
-- ✅ **axios** (with interceptors)
-- ✅ Automatic detection
+- ✅ **fetch API** (native, automatically captured)
+- ✅ **axios** (with interceptors, automatically detected)
+- ✅ Custom axios instances (via `addAxiosInstance()`)
 
-## Usage
+## 📦 Installation
 
-### 1. Copy the File
-
-Copy the `expoNetworkAgent.ts` file to your Expo project:
+Install via npm:
 
 ```bash
-# Example directory structure
-your-expo-project/
-  src/
-    debug/
-      expoNetworkAgent.ts  ← Copy here
+npm install rexpo-debugger
+```
+
+or with yarn:
+
+```bash
+yarn add rexpo-debugger
+```
+
+## 🚀 Quick Start
+
+### 1. Install the Package
+
+```bash
+npm install rexpo-debugger
 ```
 
 ### 2. Initialize the Agent
 
-Initialize the agent in your main file (e.g. `App.tsx` or `index.js`):
+In your main file (e.g. `App.tsx` or `app/_layout.tsx`):
 
 ```typescript
-import { initNetworkAgent } from "./src/debug/expoNetworkAgent";
+import { initNetworkAgent } from "rexpo-debugger";
 
 if (__DEV__) {
   initNetworkAgent({
     wsUrl: "ws://192.168.1.100:5051", // Your computer's local IP address
     enabled: true,
   });
-
-  addAxiosInstance(axios.getAxiosInstance()); // Define your Axios instance
 }
 ```
 
-### 3. Find Your Local IP Address
+### 3. (Optional) Add Custom Axios Instances
+
+If you use custom axios instances:
+
+```typescript
+import { initNetworkAgent, addAxiosInstance } from "rexpo-debugger";
+import { apiClient } from "./api/client"; // Your custom axios instance
+
+if (__DEV__) {
+  initNetworkAgent({
+    wsUrl: "ws://192.168.1.100:5051",
+  });
+
+  // Add your custom axios instance
+  addAxiosInstance(apiClient);
+}
+```
+
+### 4. Find Your Local IP Address
 
 **macOS / Linux:**
 
@@ -55,17 +79,19 @@ ipconfig
 
 Look for an address like 192.168.x.x or 10.0.x.x in the output.
 
-### 4. Start the Inspector Application
+### 5. Start the Inspector Application
 
-Open your desktop inspector application. The app will automatically start a WebSocket server at `ws://localhost:5051`.
+Download and open the Rexpo Network Inspector desktop application from [GitHub Releases](https://github.com/omeremreelmali/rexpo-debugger).
 
-### 5. Run Your Expo Application
+The app will automatically start a WebSocket server at `ws://localhost:5051`.
+
+### 6. Run Your Expo Application
 
 ```bash
 npx expo start
 ```
 
-Open your app on a physical device or emulator. Network requests will automatically start appearing in the inspector!
+Open your app on a physical device or emulator. Network requests will automatically start appearing in the inspector! 🎉
 
 ## Configuration Options
 
