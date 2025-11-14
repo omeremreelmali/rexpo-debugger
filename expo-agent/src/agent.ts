@@ -16,8 +16,7 @@
  * }
  * ```
  */
-import axios from 'axios';
-
+import axios from "axios";
 
 type NetworkMessage =
   | {
@@ -43,7 +42,7 @@ type NetworkMessage =
       errorMessage?: string;
     };
 
-type InitOptions = {
+export type InitOptions = {
   /** WebSocket URL - e.g.: "ws://192.168.1.100:5051" */
   wsUrl: string;
   /** Enable/disable the agent (default: true) */
@@ -137,10 +136,7 @@ export function initNetworkAgent(options: InitOptions) {
   // Override global.fetch
   const originalFetch = global.fetch;
 
-  global.fetch = async (
-    input: any,
-    init?: any
-  ): Promise<Response> => {
+  global.fetch = async (input: any, init?: any): Promise<Response> => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const startedAt = new Date().toISOString();
     const startTime = Date.now();
@@ -251,7 +247,8 @@ export function initNetworkAgent(options: InitOptions) {
       // Log existing interceptor count
       console.log("[NetworkAgent] 📊 Existing interceptors (global):", {
         requestCount: (axios.interceptors.request as any).handlers?.length || 0,
-        responseCount: (axios.interceptors.response as any).handlers?.length || 0,
+        responseCount:
+          (axios.interceptors.response as any).handlers?.length || 0,
       });
 
       // Request interceptor
@@ -645,8 +642,10 @@ export function addAxiosInstance(axiosInstance: any) {
 
   // Log existing interceptor count
   console.log("[NetworkAgent] 📊 Existing interceptors:", {
-    requestCount: (axiosInstance.interceptors.request as any).handlers?.length || 0,
-    responseCount: (axiosInstance.interceptors.response as any).handlers?.length || 0,
+    requestCount:
+      (axiosInstance.interceptors.request as any).handlers?.length || 0,
+    responseCount:
+      (axiosInstance.interceptors.response as any).handlers?.length || 0,
   });
 
   // Request interceptor
@@ -866,7 +865,8 @@ export function addAxiosInstance(axiosInstance: any) {
 
   // Move interceptors to the front (run before other interceptors)
   try {
-    const responseHandlers = (axiosInstance.interceptors.response as any).handlers;
+    const responseHandlers = (axiosInstance.interceptors.response as any)
+      .handlers;
     if (responseHandlers && responseHandlers.length > 1) {
       // The last added (ours) is at the end, move it to the front
       const ourHandler = responseHandlers.pop();
@@ -876,7 +876,8 @@ export function addAxiosInstance(axiosInstance: any) {
       }
     }
 
-    const requestHandlers = (axiosInstance.interceptors.request as any).handlers;
+    const requestHandlers = (axiosInstance.interceptors.request as any)
+      .handlers;
     if (requestHandlers && requestHandlers.length > 1) {
       // The last added (ours) is at the end, move it to the front
       const ourHandler = requestHandlers.pop();
