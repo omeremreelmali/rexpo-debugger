@@ -2,7 +2,7 @@
 
 A professional network debugging tool similar to **Flipper** and **Chrome DevTools** for your Expo and React Native applications.
 
-<img width="1400" alt="Rexpo Network Inspector" src="https://via.placeholder.com/1400x800/1e1e1e/cccccc?text=Expo+Network+Inspector">
+<img width="1400" alt="Rexpo Network Inspector" src="./assets/debug-screenshot.png">
 
 ## ✨ Features
 
