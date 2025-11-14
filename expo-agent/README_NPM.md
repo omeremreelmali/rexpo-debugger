@@ -6,7 +6,9 @@
 [![Downloads](https://img.shields.io/npm/dm/rexpo-debugger.svg)](https://www.npmjs.com/package/rexpo-debugger)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Flipper-like network inspector for Expo and React Native apps**
+**Flipper-like debugging tool for Expo and React Native apps**
+
+**Monitor network traffic AND console logs in real-time!** 🎉
 
 [Features](#features) • [Installation](#installation) • [Usage](#usage) • [API](#api) • [Desktop App](#desktop-app)
 
@@ -16,14 +18,23 @@
 
 ## ✨ Features
 
+### Network Monitoring
 - 🚀 **Real-time monitoring** - Capture all network requests instantly
-- 🎯 **Chrome DevTools-like UI** - Familiar and powerful interface
 - 📦 **Fetch & Axios support** - Automatically intercepts both
 - 🔍 **Request/Response inspection** - Headers, body, timing, everything
-- ⚡ **Zero configuration** - Just initialize and go
-- 💻 **Desktop inspector app** - Beautiful Electron app included
-- 🎨 **Dark theme** - Easy on the eyes
 - 🔧 **Custom axios instances** - Support for multiple instances
+
+### Console Monitoring (NEW! 🎉)
+- 📋 **All console methods** - log, warn, error, info, debug
+- 🎨 **Color-coded levels** - Visual distinction for each log type
+- 🔍 **Stack traces** - Automatic capture for errors and warnings
+- 🎯 **Rich formatting** - Objects, arrays, errors, dates, and more
+
+### General
+- ⚡ **Zero configuration** - Just initialize and go
+- 💻 **Desktop inspector app** - Beautiful Electron app with tab navigation
+- 🎨 **Dark theme** - Easy on the eyes
+- 🔒 **Development only** - Automatically disabled in production
 
 ## 📦 Installation
 
@@ -44,11 +55,19 @@ pnpm add -D rexpo-debugger
 
 ```typescript
 // App.tsx or index.js
-import { initNetworkAgent } from "rexpo-debugger";
+import { initNetworkAgent, initConsoleAgent } from "rexpo-debugger";
 
 if (__DEV__) {
+  // Network monitoring
   initNetworkAgent({
     wsUrl: "ws://192.168.1.100:5051", // Your computer's IP
+  });
+
+  // Console monitoring (NEW!)
+  initConsoleAgent({
+    wsUrl: "ws://192.168.1.100:5051",
+    enabled: true,
+    captureStackTrace: true,
   });
 }
 
@@ -68,7 +87,9 @@ Download the desktop app from [GitHub Releases](https://github.com/omeremreelmal
 
 ### 3. Start debugging! 🎉
 
-Run your Expo app and the desktop inspector will automatically capture all network requests.
+Run your Expo app and the desktop inspector will automatically capture:
+- ✅ All network requests (fetch & axios)
+- ✅ All console logs (log, warn, error, info, debug)
 
 ## 📖 Usage
 

@@ -1,12 +1,18 @@
-# Rexpo Debugger - Network Agent
+# Rexpo Debugger
 
-Network debugging tool for Expo and React Native apps. Inspect all network traffic in real-time with Chrome DevTools-like UI.
+Professional debugging tool for Expo and React Native apps. Inspect network traffic **and** console logs in real-time with Chrome DevTools-like UI.
 
-## ✨ Supported HTTP Libraries
+## ✨ Features
 
+### Network Monitoring
 - ✅ **fetch API** (native, automatically captured)
 - ✅ **axios** (with interceptors, automatically detected)
 - ✅ Custom axios instances (via `addAxiosInstance()`)
+
+### Console Monitoring (NEW! 🎉)
+- ✅ **All console methods** (log, warn, error, info, debug)
+- ✅ **Stack traces** for errors and warnings
+- ✅ **Rich formatting** (objects, arrays, errors, dates, etc.)
 
 ## 📦 Installation
 
@@ -35,12 +41,20 @@ npm install rexpo-debugger
 In your main file (e.g. `App.tsx` or `app/_layout.tsx`):
 
 ```typescript
-import { initNetworkAgent } from "rexpo-debugger";
+import { initNetworkAgent, initConsoleAgent } from "rexpo-debugger";
 
 if (__DEV__) {
+  // Network monitoring
   initNetworkAgent({
     wsUrl: "ws://192.168.1.100:5051", // Your computer's local IP address
     enabled: true,
+  });
+
+  // Console monitoring (NEW!)
+  initConsoleAgent({
+    wsUrl: "ws://192.168.1.100:5051", // Same WebSocket connection
+    enabled: true,
+    captureStackTrace: true, // Capture stack traces for errors/warnings
   });
 }
 ```
@@ -50,16 +64,27 @@ if (__DEV__) {
 If you use custom axios instances:
 
 ```typescript
-import { initNetworkAgent, addAxiosInstance } from "rexpo-debugger";
+import { 
+  initNetworkAgent, 
+  initConsoleAgent, 
+  addAxiosInstance 
+} from "rexpo-debugger";
 import { apiClient } from "./api/client"; // Your custom axios instance
 
 if (__DEV__) {
+  // Network monitoring
   initNetworkAgent({
     wsUrl: "ws://192.168.1.100:5051",
   });
 
   // Add your custom axios instance
   addAxiosInstance(apiClient);
+
+  // Console monitoring
+  initConsoleAgent({
+    wsUrl: "ws://192.168.1.100:5051",
+    enabled: true,
+  });
 }
 ```
 

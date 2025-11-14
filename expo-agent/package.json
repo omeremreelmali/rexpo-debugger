@@ -1,7 +1,7 @@
 {
   "name": "rexpo-debugger",
-  "version": "1.0.5",
-  "description": "Network debugging tool for Expo and React Native apps. Inspect all network traffic in real-time with Chrome DevTools-like UI.",
+  "version": "1.1.0",
+  "description": "Professional debugging tool for Expo and React Native apps. Inspect network traffic and console logs in real-time with Chrome DevTools-like UI.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -26,6 +26,8 @@
     "expo",
     "react-native",
     "network",
+    "console",
+    "logging",
     "debugging",
     "inspector",
     "devtools",
@@ -36,7 +38,9 @@
     "flipper",
     "chrome-devtools",
     "network-monitor",
-    "http-inspector"
+    "http-inspector",
+    "console-logger",
+    "debug-tool"
   ],
   "author": "Ömer Emre Elmalı <omeremreelma@gmail.com>",
   "license": "MIT",
