@@ -1,31 +1,44 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
-import { NetworkMessage, RequestState, FilterMethod, FilterStatus } from "../types";
+import { NetworkMessage, RequestState, FilterMethod, FilterStatus, ConsoleLog, FilterLogLevel } from "../types";
+
+type TabType = "network" | "console";
 
 interface NetworkState {
   requests: RequestState[];
+  consoleLogs: ConsoleLog[];
   selectedRequestId: string | null;
+  selectedConsoleId: string | null;
   searchQuery: string;
   filterMethod: FilterMethod;
   filterStatus: FilterStatus;
+  filterLogLevel: FilterLogLevel;
   isPaused: boolean;
+  activeTab: TabType;
 }
 
 type NetworkAction =
   | { type: "ADD_MESSAGE"; payload: NetworkMessage }
   | { type: "SELECT_REQUEST"; payload: string | null }
+  | { type: "SELECT_CONSOLE"; payload: string | null }
   | { type: "SET_SEARCH"; payload: string }
   | { type: "SET_FILTER_METHOD"; payload: FilterMethod }
   | { type: "SET_FILTER_STATUS"; payload: FilterStatus }
+  | { type: "SET_FILTER_LOG_LEVEL"; payload: FilterLogLevel }
+  | { type: "SET_ACTIVE_TAB"; payload: TabType }
   | { type: "TOGGLE_PAUSE" }
   | { type: "CLEAR_ALL" };
 
 const initialState: NetworkState = {
   requests: [],
+  consoleLogs: [],
   selectedRequestId: null,
+  selectedConsoleId: null,
   searchQuery: "",
   filterMethod: "ALL",
   filterStatus: "ALL",
+  filterLogLevel: "ALL",
   isPaused: false,
+  activeTab: "network",
 };
 
 function networkReducer(state: NetworkState, action: NetworkAction): NetworkState {
@@ -34,6 +47,20 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
       if (state.isPaused) return state;
 
       const message = action.payload;
+
+      // Handle console messages
+      if (message.type === "console") {
+        const newLog: ConsoleLog = {
+          id: message.id,
+          level: message.level,
+          args: message.args,
+          timestamp: message.timestamp,
+          stack: message.stack,
+        };
+        return { ...state, consoleLogs: [newLog, ...state.consoleLogs] };
+      }
+
+      // Handle network messages
       const existingIndex = state.requests.findIndex((r) => r.id === message.id);
 
       if (message.type === "request") {
@@ -102,6 +129,9 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
     case "SELECT_REQUEST":
       return { ...state, selectedRequestId: action.payload };
 
+    case "SELECT_CONSOLE":
+      return { ...state, selectedConsoleId: action.payload };
+
     case "SET_SEARCH":
       return { ...state, searchQuery: action.payload };
 
@@ -111,11 +141,23 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
     case "SET_FILTER_STATUS":
       return { ...state, filterStatus: action.payload };
 
+    case "SET_FILTER_LOG_LEVEL":
+      return { ...state, filterLogLevel: action.payload };
+
+    case "SET_ACTIVE_TAB":
+      return { ...state, activeTab: action.payload };
+
     case "TOGGLE_PAUSE":
       return { ...state, isPaused: !state.isPaused };
 
     case "CLEAR_ALL":
-      return { ...state, requests: [], selectedRequestId: null };
+      return { 
+        ...state, 
+        requests: [], 
+        consoleLogs: [],
+        selectedRequestId: null,
+        selectedConsoleId: null,
+      };
 
     default:
       return state;

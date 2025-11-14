@@ -1,26 +1,35 @@
-# 🔍 Rexpo Network Inspector
+# 🔍 Rexpo Debugger
 
-A professional network debugging tool similar to **Flipper** and **Chrome DevTools** for your Expo and React Native applications.
+A professional debugging tool similar to **Flipper** and **Chrome DevTools** for your Expo and React Native applications. Monitor network traffic **and** console logs in real-time!
 
-<img width="1400" alt="Rexpo Network Inspector" src="./assets/debug-screenshot.png">
+<img width="1400" alt="Rexpo Debugger" src="./assets/debug-screenshot.png">
 
 ## ✨ Features
 
+### Network Monitoring
 - 🚀 **Real-time monitoring**: View all network requests instantly
-- 🎯 **Chrome DevTools-like UI**: Familiar and powerful interface
+- 📦 **Fetch & Axios support**: Automatically captures both HTTP clients
 - 🔎 **Advanced filtering**: Filter by method, status code, and URL
 - 📊 **Detailed analysis**: Headers, request/response body, timing information
+
+### Console Monitoring (NEW! 🎉)
+- 📋 **Console logs**: Capture all console.log, warn, error, info, debug calls
+- 🎨 **Color-coded levels**: Different colors for each log level
+- 🔍 **Stack traces**: Automatic stack trace capture for errors and warnings
+- 🎯 **Rich formatting**: Objects, arrays, errors, dates, and more
+
+### General
 - 💻 **Cross-platform**: Support for macOS, Windows, and Linux
-- 🎨 **Modern UI**: Dark theme and responsive design
+- 🎨 **Modern UI**: Dark theme with tab navigation
 - ⚡ **Lightweight and fast**: Won't slow down your application
-- 📦 **Fetch & Axios support**: Automatically captures both HTTP clients
+- 🔒 **Development only**: Automatically disabled in production
 
 ## 🏗️ Architecture
 
 This project consists of two main components:
 
-1. **Desktop Inspector (Electron App)**: Desktop application that visualizes network traffic
-2. **Expo Agent**: Lightweight client agent integrated into your Expo application
+1. **Desktop Inspector (Electron App)**: Desktop application that visualizes network traffic and console logs
+2. **Expo Agents**: Lightweight client agents integrated into your Expo application
 
 ```
 ┌─────────────────────┐         WebSocket          ┌──────────────────────┐
@@ -28,8 +37,10 @@ This project consists of two main components:
 │  Expo/RN App        │◄───────────────────────────┤  Desktop Inspector   │
 │  (Mobile/Emulator)  │                            │  (Electron)          │
 │                     │                            │                      │
-│  + expoNetworkAgent │                            │  + WebSocket Server  │
-│  + fetch override   │                            │  + React UI          │
+│  + Network Agent    │                            │  + WebSocket Server  │
+│  + Console Agent    │                            │  + React UI          │
+│  + fetch override   │                            │  + Tab Navigation    │
+│  + console override │                            │                      │
 └─────────────────────┘                            └──────────────────────┘
 ```
 
@@ -49,28 +60,38 @@ npm run build
 npm run package
 ```
 
-### 2. Integrate the Expo Agent
+### 2. Integrate the Expo Agents
 
-Copy the `expo-agent/expoNetworkAgent.ts` file to your Expo project:
+Copy the agent files to your Expo project:
 
 ```bash
 # In your Expo project
 mkdir -p src/debug
-cp path/to/expo-agent/expoNetworkAgent.ts src/debug/
+cp -r path/to/expo-agent/src/* src/debug/
 ```
 
-Initialize the agent in your main file (e.g., `App.tsx`):
+Initialize the agents in your main file (e.g., `App.tsx`):
 
 ```typescript
-import { initNetworkAgent } from "./src/debug/expoNetworkAgent";
+import { initNetworkAgent, initConsoleAgent } from "./src/debug";
 
 if (__DEV__) {
+  // Network monitoring
   initNetworkAgent({
     wsUrl: "ws://YOUR_LOCAL_IP:5051", // Example: ws://192.168.1.100:5051
     enabled: true,
   });
+
+  // Console monitoring (NEW!)
+  initConsoleAgent({
+    wsUrl: "ws://YOUR_LOCAL_IP:5051", // Same WebSocket connection
+    enabled: true,
+    captureStackTrace: true, // Capture stack traces for errors/warnings
+  });
 }
 ```
+
+> 💡 **Tip**: You can enable one or both agents based on your needs!
 
 ### 3. Find Your Local IP Address
 
@@ -111,7 +132,12 @@ Open your application on a physical device or emulator. Network requests will au
 
 ## 🎨 UI Features
 
-### Main Screen
+### Tab Navigation
+
+- **Network Tab** 🌐: View all HTTP requests (fetch & axios)
+- **Console Tab** 📋: View all console logs
+
+### Network Tab
 
 - **Left Panel**: List of all network requests
   - Method badges (GET, POST, PUT, DELETE, PATCH)
@@ -124,17 +150,29 @@ Open your application on a physical device or emulator. Network requests will au
   - **Response**: Response body (JSON pretty-print)
   - **Timing**: Timing details
 
+### Console Tab (NEW! 🎉)
+
+- **Left Panel**: List of all console logs
+  - Level badges (LOG, INFO, WARN, ERROR, DEBUG)
+  - Color-coded by severity
+  - Message preview and timestamp
+- **Right Panel**: Details of selected log
+  - **Message**: All arguments with formatting
+  - **Stack Trace**: For errors and warnings
+  - **Raw Data**: Full log information
+
 ### Filtering and Search
 
-- **Search**: Search by URL
-- **Method Filter**: Show only specific methods
-- **Status Filter**: Filter by status code
-- **Pause**: Temporarily stop new requests
-- **Clear**: Delete all requests
+- **Search**: Search by URL (Network) or message (Console)
+- **Method Filter**: Show only specific HTTP methods (Network)
+- **Status Filter**: Filter by status code (Network)
+- **Level Filter**: Filter by log level (Console)
+- **Pause**: Temporarily stop capturing new data
+- **Clear**: Delete all captured data
 
 ## 🔧 Configuration
 
-### Agent Options
+### Network Agent Options
 
 ```typescript
 initNetworkAgent({
@@ -146,6 +184,27 @@ initNetworkAgent({
 
   // Maximum body snippet length (optional, default: 3000)
   maxBodyLength: 3000,
+
+  // Enable debug logging (optional, default: false)
+  debug: false,
+});
+```
+
+### Console Agent Options
+
+```typescript
+initConsoleAgent({
+  // WebSocket URL (required)
+  wsUrl: "ws://192.168.1.100:5051",
+
+  // Enable/disable agent (optional, default: true)
+  enabled: true,
+
+  // Enable debug logging (optional, default: false)
+  debug: false,
+
+  // Capture stack traces for errors/warnings (optional, default: true)
+  captureStackTrace: true,
 });
 ```
 
@@ -255,14 +314,24 @@ After production build:
 
 ## 🚀 Future Features
 
+### Network
 - [ ] XMLHttpRequest support
 - [ ] WebSocket traffic monitoring
 - [ ] GraphQL query/mutation visualization
-- [ ] Export/Import feature (HAR format)
 - [ ] Request replay feature
 - [ ] Mock response feature
+
+### Console
+- [x] ✅ Console log monitoring (COMPLETED!)
+- [ ] Advanced log formatting (React components, etc.)
+- [ ] Log export feature
+
+### General
+- [ ] Export/Import feature (HAR format for network, JSON for console)
 - [ ] Dark/Light theme toggle
 - [ ] Automatic reconnect logic
+- [ ] Performance metrics
+- [ ] Redux/Zustand state monitoring
 
 ## 📄 License
 

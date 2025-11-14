@@ -1,0 +1,170 @@
+.console-table {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: #252526;
+}
+
+.console-header {
+  display: flex;
+  background: #2d2d30;
+  border-bottom: 1px solid #3e3e42;
+  font-size: 11px;
+  font-weight: 600;
+  color: #cccccc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.console-header-cell {
+  padding: 8px 12px;
+  border-right: 1px solid #3e3e42;
+}
+
+.console-header-cell.level {
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.console-header-cell.message {
+  flex: 1;
+  min-width: 0;
+}
+
+.console-header-cell.timestamp {
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.console-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.console-row {
+  display: flex;
+  border-bottom: 1px solid #2d2d30;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+  font-size: 13px;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.console-row:hover {
+  background: #2a2d2e;
+}
+
+.console-row.selected {
+  background: #094771;
+}
+
+.console-row.selected:hover {
+  background: #0e5a8e;
+}
+
+/* Level colors */
+.console-row.level-log {
+  border-left: 3px solid #1e90ff;
+}
+
+.console-row.level-info {
+  border-left: 3px solid #00bfff;
+}
+
+.console-row.level-warn {
+  border-left: 3px solid #ffa500;
+}
+
+.console-row.level-error {
+  border-left: 3px solid #ff4444;
+}
+
+.console-row.level-debug {
+  border-left: 3px solid #9370db;
+}
+
+.console-cell {
+  padding: 8px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.console-cell.level {
+  width: 100px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.console-cell.message {
+  flex: 1;
+  min-width: 0;
+  color: #d4d4d4;
+}
+
+.console-cell.timestamp {
+  width: 140px;
+  flex-shrink: 0;
+  color: #858585;
+  font-size: 11px;
+}
+
+.level-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.level-badge.log {
+  background: rgba(30, 144, 255, 0.2);
+  color: #1e90ff;
+}
+
+.level-badge.info {
+  background: rgba(0, 191, 255, 0.2);
+  color: #00bfff;
+}
+
+.level-badge.warn {
+  background: rgba(255, 165, 0, 0.2);
+  color: #ffa500;
+}
+
+.level-badge.error {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+}
+
+.level-badge.debug {
+  background: rgba(147, 112, 219, 0.2);
+  color: #9370db;
+}
+
+.console-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #858585;
+  gap: 8px;
+  padding: 40px;
+  text-align: center;
+}
+
+.console-empty span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.console-empty small {
+  font-size: 12px;
+  color: #6e6e6e;
+}
+

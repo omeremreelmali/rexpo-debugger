@@ -1,5 +1,7 @@
 // Shared types for renderer
 
+export type LogLevel = "log" | "warn" | "error" | "info" | "debug";
+
 export type NetworkMessage =
   | {
       type: "request";
@@ -22,6 +24,14 @@ export type NetworkMessage =
       finishedAt: string;
       isError: boolean;
       errorMessage?: string;
+    }
+  | {
+      type: "console";
+      id: string;
+      level: LogLevel;
+      args: any[];
+      timestamp: string;
+      stack?: string;
     };
 
 export interface RequestState {
@@ -41,6 +51,15 @@ export interface RequestState {
   errorMessage?: string;
 }
 
+export interface ConsoleLog {
+  id: string;
+  level: LogLevel;
+  args: any[];
+  timestamp: string;
+  stack?: string;
+}
+
 export type FilterMethod = "ALL" | "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 export type FilterStatus = "ALL" | "2xx" | "3xx" | "4xx" | "5xx" | "ERR";
+export type FilterLogLevel = "ALL" | "log" | "warn" | "error" | "info" | "debug";
 
