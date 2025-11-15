@@ -2,6 +2,8 @@
 
 Professional debugging tool for Expo and React Native apps. Inspect network traffic **and** console logs in real-time with Chrome DevTools-like UI.
 
+<img width="1400" alt="Rexpo Debugger Network View" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/debug-screenshot.png">
+
 ## ✨ Features
 
 ### Network Monitoring
@@ -15,6 +17,19 @@ Professional debugging tool for Expo and React Native apps. Inspect network traf
 - ✅ **All console methods** (log, warn, error, info, debug)
 - ✅ **Stack traces** for errors and warnings
 - ✅ **Rich formatting** (objects, arrays, errors, dates, etc.)
+
+<img width="1400" alt="Rexpo Debugger Console View" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/debug-console-screenshot.png">
+
+## 🏗️ How It Works
+
+Rexpo Debugger consists of two parts:
+
+1. **Desktop Inspector** (Electron app) - Must be running on your computer
+2. **npm package** - Installed in your Expo app
+
+Your Expo app connects to the desktop inspector via WebSocket to send network/console data.
+
+> 💡 **Note:** Standalone installable packages for the desktop inspector will be available soon, making setup even easier!
 
 ## 📦 Installation
 
