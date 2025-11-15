@@ -95,18 +95,36 @@ body {
 }
 
 .left-panel {
-  flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-width: 400px;
+  min-width: 300px;
+  flex-shrink: 0;
 }
 
 .right-panel {
-  width: 500px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 300px;
+  flex-shrink: 0;
+}
+
+.resizer {
+  width: 4px;
+  background: #2d2d30;
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.resizer:hover {
+  background: #007acc;
+}
+
+.resizer.dragging {
+  background: #007acc;
 }
 
 ::-webkit-scrollbar {
