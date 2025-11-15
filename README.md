@@ -15,18 +15,23 @@ A professional debugging tool similar to **Flipper** and **Chrome DevTools** for
 ## ✨ Features
 
 ### Network Monitoring
+
 - 🚀 **Real-time monitoring**: View all network requests instantly
 - 📦 **Fetch & Axios support**: Automatically captures both HTTP clients
 - 🔎 **Advanced filtering**: Filter by method, status code, and URL
 - 📊 **Detailed analysis**: Headers, request/response body, timing information
 
+<img width="1400" alt="Rexpo Debugger" src="./assets/debug-console-screenshot.png">
+
 ### Console Monitoring (NEW! 🎉)
+
 - 📋 **Console logs**: Capture all console.log, warn, error, info, debug calls
 - 🎨 **Color-coded levels**: Different colors for each log level
 - 🔍 **Stack traces**: Automatic stack trace capture for errors and warnings
 - 🎯 **Rich formatting**: Objects, arrays, errors, dates, and more
 
 ### General
+
 - 💻 **Cross-platform**: Support for macOS, Windows, and Linux
 - 🎨 **Modern UI**: Dark theme with tab navigation
 - ⚡ **Lightweight and fast**: Won't slow down your application
@@ -364,6 +369,7 @@ After production build:
 ## 🚀 Future Features
 
 ### Network
+
 - [ ] XMLHttpRequest support
 - [ ] WebSocket traffic monitoring
 - [ ] GraphQL query/mutation visualization
@@ -371,11 +377,13 @@ After production build:
 - [ ] Mock response feature
 
 ### Console
+
 - [x] ✅ Console log monitoring (COMPLETED!)
 - [ ] Advanced log formatting (React components, etc.)
 - [ ] Log export feature
 
 ### General
+
 - [ ] Export/Import feature (HAR format for network, JSON for console)
 - [ ] Dark/Light theme toggle
 - [ ] Automatic reconnect logic
