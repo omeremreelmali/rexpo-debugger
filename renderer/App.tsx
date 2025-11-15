@@ -11,8 +11,8 @@ function AppContent() {
   const { state, dispatch } = useNetwork();
 
   return (
-    <div className="app-container">
-      <FilterBar />
+      <div className="app-container">
+        <FilterBar />
       
       {/* Tab Navigation */}
       <div className="tab-navigation">
@@ -39,11 +39,11 @@ function AppContent() {
       </div>
 
       {/* Main Content */}
-      <div className="main-content">
-        <div className="left-panel">
+        <div className="main-content">
+          <div className="left-panel">
           {state.activeTab === "network" ? <NetworkTable /> : <ConsoleTable />}
-        </div>
-        <div className="right-panel">
+          </div>
+          <div className="right-panel">
           {state.activeTab === "network" ? <RequestDetails /> : <ConsoleDetails />}
         </div>
       </div>

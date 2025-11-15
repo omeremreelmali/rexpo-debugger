@@ -43,43 +43,43 @@ export function FilterBar() {
 
         {isNetworkTab ? (
           <>
-            <div className="filter-group">
-              <label>Method:</label>
-              <select
-                value={state.filterMethod}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_FILTER_METHOD",
-                    payload: e.target.value as FilterMethod,
-                  })
-                }
-              >
-                {methods.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="filter-group">
+          <label>Method:</label>
+          <select
+            value={state.filterMethod}
+            onChange={(e) =>
+              dispatch({
+                type: "SET_FILTER_METHOD",
+                payload: e.target.value as FilterMethod,
+              })
+            }
+          >
+            {methods.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
 
-            <div className="filter-group">
-              <label>Status:</label>
-              <select
-                value={state.filterStatus}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_FILTER_STATUS",
-                    payload: e.target.value as FilterStatus,
-                  })
-                }
-              >
-                {statuses.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="filter-group">
+          <label>Status:</label>
+          <select
+            value={state.filterStatus}
+            onChange={(e) =>
+              dispatch({
+                type: "SET_FILTER_STATUS",
+                payload: e.target.value as FilterStatus,
+              })
+            }
+          >
+            {statuses.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
           </>
         ) : (
           <div className="filter-group">
