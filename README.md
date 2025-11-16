@@ -4,6 +4,7 @@
 
 [![npm version](https://badge.fury.io/js/rexpo-debugger.svg)](https://www.npmjs.com/package/rexpo-debugger)
 [![Downloads](https://img.shields.io/npm/dm/rexpo-debugger.svg)](https://www.npmjs.com/package/rexpo-debugger)
+[![GitHub release](https://img.shields.io/github/release/omeremreelmali/rexpo-debugger.svg)](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
@@ -37,6 +38,13 @@ A professional debugging tool similar to **Flipper** and **Chrome DevTools** for
 - ⚡ **Lightweight and fast**: Won't slow down your application
 - 🔒 **Development only**: Automatically disabled in production
 
+## 🚀 Quick Start
+
+1. **Download** the desktop app from [GitHub Releases](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+2. **Install** the npm package: `npm install --save-dev rexpo-debugger`
+3. **Initialize** in your Expo app (see Installation below)
+4. **Run** the desktop app and start debugging!
+
 ## 🏗️ Architecture
 
 This project consists of two main components:
@@ -59,7 +67,19 @@ This project consists of two main components:
 
 ## 📦 Installation
 
-### 1. Install the npm package (Recommended)
+### 0. Download Desktop Inspector (Recommended)
+
+Download the latest release for your platform:
+
+- **macOS (Apple Silicon)**: [Rexpo Network Inspector-1.0.0-arm64.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+- **macOS (Intel)**: [Rexpo Network Inspector-1.0.0.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+- **Windows**: [Rexpo Network Inspector Setup 1.0.0.exe](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+- **Linux (x64)**: [Rexpo Network Inspector-1.0.0.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+- **Linux (ARM64)**: [Rexpo Network Inspector-1.0.0-arm64.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+
+> 📦 **All releases**: [View all releases on GitHub](https://github.com/omeremreelmali/rexpo-debugger/releases)
+
+### 1. Install the npm package (Required)
 
 The easiest way to get started is to install the package from npm:
 
@@ -96,7 +116,9 @@ if (__DEV__) {
 
 > 📦 **npm package**: [rexpo-debugger](https://www.npmjs.com/package/rexpo-debugger)
 
-### 2. Install the Desktop Inspector Application
+### 2. Build from Source (Optional)
+
+If you prefer to build the desktop application from source:
 
 ```bash
 # Clone the repository

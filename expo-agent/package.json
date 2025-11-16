@@ -1,6 +1,6 @@
 {
   "name": "rexpo-debugger",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Professional debugging tool for Expo and React Native apps. Inspect network traffic and console logs in real-time with Chrome DevTools-like UI.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -46,7 +46,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/omeremreelmali/rexpo-debugger.git"
+    "url": "git+https://github.com/omeremreelmali/rexpo-debugger.git"
   },
   "bugs": {
     "url": "https://github.com/omeremreelmali/rexpo-debugger/issues"

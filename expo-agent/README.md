@@ -29,7 +29,7 @@ Rexpo Debugger consists of two parts:
 
 Your Expo app connects to the desktop inspector via WebSocket to send network/console data.
 
-> 💡 **Note:** Standalone installable packages for the desktop inspector will be available soon, making setup even easier!
+> 💡 **Desktop Inspector**: Download pre-built binaries for macOS, Windows, and Linux from [GitHub Releases](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
 
 ## 📦 Installation
 
@@ -121,11 +121,19 @@ ipconfig
 
 Look for an address like 192.168.x.x or 10.0.x.x in the output.
 
-### 5. Start the Inspector Application
+### 5. Download and Start the Desktop Inspector
 
-Download and open the Rexpo Network Inspector desktop application from [GitHub Releases](https://github.com/omeremreelmali/rexpo-debugger).
+Download the desktop application for your platform:
 
-The app will automatically start a WebSocket server at `ws://localhost:5051`.
+- **macOS (Apple Silicon)**: [Rexpo Network Inspector-1.0.0-arm64.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+- **macOS (Intel)**: [Rexpo Network Inspector-1.0.0.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+- **Windows**: [Rexpo Network Inspector Setup 1.0.0.exe](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+- **Linux (x64)**: [Rexpo Network Inspector-1.0.0.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+- **Linux (ARM64)**: [Rexpo Network Inspector-1.0.0-arm64.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+
+> 📦 **All releases**: [View all releases on GitHub](https://github.com/omeremreelmali/rexpo-debugger/releases)
+
+After downloading, open the application. It will automatically start a WebSocket server at `ws://localhost:5051`.
 
 ### 6. Run Your Expo Application
 
