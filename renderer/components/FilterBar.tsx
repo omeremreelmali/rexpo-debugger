@@ -13,6 +13,7 @@ export function FilterBar() {
     "PUT",
     "DELETE",
     "PATCH",
+    "OPTIONS",
   ];
   const statuses: FilterStatus[] = ["ALL", "2xx", "3xx", "4xx", "5xx", "ERR"];
   const logLevels: FilterLogLevel[] = ["ALL", "log", "info", "warn", "error", "debug"];
@@ -112,7 +113,7 @@ export function FilterBar() {
         </button>
         <button
           className="clear-button"
-          onClick={() => dispatch({ type: "CLEAR_ALL" })}
+          onClick={() => dispatch({ type: isNetworkTab ? "CLEAR_NETWORK" : "CLEAR_CONSOLE" })}
         >
           🗑️ Clear
         </button>

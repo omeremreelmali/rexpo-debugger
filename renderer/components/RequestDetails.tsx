@@ -101,7 +101,11 @@ export function RequestDetails() {
               </div>
               <div className="info-row">
                 <span className="info-label">Method:</span>
-                <span className="info-value">{selectedRequest.method}</span>
+                <span className="info-value">
+                  {selectedRequest.method === "OPTIONS" 
+                    ? "OPTIONS (Preflight)" 
+                    : selectedRequest.method}
+                </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Status:</span>

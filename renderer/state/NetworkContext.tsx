@@ -26,7 +26,9 @@ type NetworkAction =
   | { type: "SET_FILTER_LOG_LEVEL"; payload: FilterLogLevel }
   | { type: "SET_ACTIVE_TAB"; payload: TabType }
   | { type: "TOGGLE_PAUSE" }
-  | { type: "CLEAR_ALL" };
+  | { type: "CLEAR_ALL" }
+  | { type: "CLEAR_NETWORK" }
+  | { type: "CLEAR_CONSOLE" };
 
 const initialState: NetworkState = {
   requests: [],
@@ -156,6 +158,20 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
         requests: [], 
         consoleLogs: [],
         selectedRequestId: null,
+        selectedConsoleId: null,
+      };
+
+    case "CLEAR_NETWORK":
+      return {
+        ...state,
+        requests: [],
+        selectedRequestId: null,
+      };
+
+    case "CLEAR_CONSOLE":
+      return {
+        ...state,
+        consoleLogs: [],
         selectedConsoleId: null,
       };
 

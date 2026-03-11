@@ -59,7 +59,7 @@ export interface ConsoleLog {
   stack?: string;
 }
 
-export type FilterMethod = "ALL" | "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+export type FilterMethod = "ALL" | "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS";
 export type FilterStatus = "ALL" | "2xx" | "3xx" | "4xx" | "5xx" | "ERR";
 export type FilterLogLevel = "ALL" | "log" | "warn" | "error" | "info" | "debug";
 

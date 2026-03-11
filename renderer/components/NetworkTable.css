@@ -113,6 +113,11 @@
   color: #000000;
 }
 
+.method-options {
+  background: #9cdcfe;
+  color: #000000;
+}
+
 .method-unknown {
   background: #6c6c6c;
   color: #ffffff;

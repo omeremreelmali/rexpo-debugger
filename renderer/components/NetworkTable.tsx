@@ -96,7 +96,7 @@ export function NetworkTable() {
               >
                 <td>
                   <span className={`method-badge method-${request.method.toLowerCase()}`}>
-                    {request.method}
+                    {request.method === "OPTIONS" ? "Preflight" : request.method}
                   </span>
                 </td>
                 <td>
