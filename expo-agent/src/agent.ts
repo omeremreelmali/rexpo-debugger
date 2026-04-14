@@ -57,6 +57,7 @@ let socket: WebSocket | null = null;
 let healthCheckInterval: any = null;
 let maxBodyLength = Infinity;
 let debugMode = false;
+let interceptedFetch: typeof fetch;
 
 // Metadata storage - use config object as key
 const requestMetadataMap = new WeakMap<
@@ -137,6 +138,33 @@ export function initNetworkAgent(options: InitOptions) {
       );
     };
 
+    socket.onmessage = (event) => {
+      try {
+        let dataStr = typeof event.data === "string" ? event.data : event.data.toString();
+        const message = JSON.parse(dataStr);
+        if (message.type === "command" && message.command === "replay_request") {
+          const { url, method, headers, body } = message.payload;
+          debugLog(`[NetworkAgent] 🔄 Replaying request: ${method} ${url}`);
+          
+          const init: any = { method };
+          if (headers) init.headers = headers;
+          if (body && ["POST", "PUT", "PATCH"].includes(method.toUpperCase())) {
+            init.body = body;
+          }
+          
+          if (interceptedFetch) {
+            interceptedFetch(url, init).catch(err => {
+               errorLog("[NetworkAgent] ❌ Replay request failed:", err);
+            });
+          } else {
+            errorLog("[NetworkAgent] ❌ Intercepted fetch is not ready yet.");
+          }
+        }
+      } catch (e) {
+        errorLog("[NetworkAgent] ❌ Failed to parse incoming message:", e);
+      }
+    };
+
     socket.onclose = (e) => {
       debugLog("[NetworkAgent] 🔌 Disconnected from inspector");
       debugLog("[NetworkAgent] 🔍 Close code:", e.code, "reason:", e.reason);
@@ -157,7 +185,7 @@ export function initNetworkAgent(options: InitOptions) {
   // Override global.fetch
   const originalFetch = global.fetch;
 
-  global.fetch = async (input: any, init?: any): Promise<Response> => {
+  interceptedFetch = async (input: any, init?: any): Promise<Response> => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const startedAt = new Date().toISOString();
     const startTime = Date.now();
@@ -257,6 +285,8 @@ export function initNetworkAgent(options: InitOptions) {
       throw err;
     }
   };
+
+  global.fetch = interceptedFetch;
 
   // ⭐ ADD AXIOS INTERCEPTOR (if available)
   try {

@@ -9,6 +9,7 @@ declare global {
     electron: {
       onNetworkMessage: (callback: (message: any) => void) => void;
       removeNetworkMessageListener: () => void;
+      sendCommand: (command: any) => void;
     };
   }
 }

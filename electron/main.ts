@@ -1,7 +1,7 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "path";
 import { WebSocketServer, WebSocket } from "ws";
-import { NetworkMessage } from "./types";
+import { NetworkMessage, CommandMessage } from "./types";
 
 const WS_PORT = 5051;
 let mainWindow: BrowserWindow | null = null;
@@ -34,6 +34,16 @@ function createWindow() {
 
 function startWebSocketServer() {
   wss = new WebSocketServer({ port: WS_PORT });
+
+  ipcMain.on("send-command", (_event, command: CommandMessage) => {
+    if (wss) {
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(command));
+        }
+      });
+    }
+  });
 
   console.log(`[Inspector] WebSocket server started on ws://localhost:${WS_PORT}`);
 

@@ -63,3 +63,13 @@ export type FilterMethod = "ALL" | "GET" | "POST" | "PUT" | "DELETE" | "PATCH" |
 export type FilterStatus = "ALL" | "2xx" | "3xx" | "4xx" | "5xx" | "ERR";
 export type FilterLogLevel = "ALL" | "log" | "warn" | "error" | "info" | "debug";
 
+export type CommandMessage = {
+  type: "command";
+  command: "replay_request";
+  payload: {
+    url: string;
+    method: string;
+    headers?: Record<string, string>;
+    body?: string;
+  };
+};

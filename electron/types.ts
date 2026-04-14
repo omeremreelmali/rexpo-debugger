@@ -59,3 +59,13 @@ export interface ConsoleLog {
   stack?: string;
 }
 
+export type CommandMessage = {
+  type: "command";
+  command: "replay_request";
+  payload: {
+    url: string;
+    method: string;
+    headers?: Record<string, string>;
+    body?: string;
+  };
+};

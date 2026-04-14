@@ -28,6 +28,21 @@ export function RequestDetails() {
     }
   };
 
+  const handleReplay = () => {
+    if (!selectedRequest) return;
+
+    window.electron.sendCommand({
+      type: "command",
+      command: "replay_request",
+      payload: {
+        url: selectedRequest.url,
+        method: selectedRequest.method,
+        headers: selectedRequest.requestHeaders,
+        body: selectedRequest.requestBodySnippet,
+      },
+    });
+  };
+
   if (!selectedRequest) {
     return (
       <div className="request-details-container">
@@ -86,13 +101,34 @@ export function RequestDetails() {
           <div className="details-section">
             <div className="section-header">
               <h3>General Information</h3>
-              <button
-                className={`copy-curl-button ${copySuccess ? "success" : ""}`}
-                onClick={handleCopyCurl}
-                title="Copy as cURL"
-              >
-                {copySuccess ? "✓ Copied!" : "📋 Copy as cURL"}
-              </button>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  className="replay-request-button"
+                  onClick={handleReplay}
+                  title="Replay this request"
+                  style={{
+                    backgroundColor: "transparent",
+                    color: "inherit",
+                    border: "1px solid #4a4a4a",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                >
+                  🔄 Replay
+                </button>
+                <button
+                  className={`copy-curl-button ${copySuccess ? "success" : ""}`}
+                  onClick={handleCopyCurl}
+                  title="Copy as cURL"
+                >
+                  {copySuccess ? "✓ Copied!" : "📋 Copy as cURL"}
+                </button>
+              </div>
             </div>
             <div className="info-grid">
               <div className="info-row">

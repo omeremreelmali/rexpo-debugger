@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { NetworkMessage } from "./types";
+import { NetworkMessage, CommandMessage } from "./types";
 
 // Expose protected methods to renderer process
 contextBridge.exposeInMainWorld("electron", {
@@ -11,12 +11,16 @@ contextBridge.exposeInMainWorld("electron", {
   removeNetworkMessageListener: () => {
     ipcRenderer.removeAllListeners("network-message");
   },
+  sendCommand: (command: CommandMessage) => {
+    ipcRenderer.send("send-command", command);
+  },
 });
 
 // Type definition for window.electron
 export interface ElectronAPI {
   onNetworkMessage: (callback: (message: NetworkMessage) => void) => void;
   removeNetworkMessageListener: () => void;
+  sendCommand: (command: CommandMessage) => void;
 }
 
 declare global {
