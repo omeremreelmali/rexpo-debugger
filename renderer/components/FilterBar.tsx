@@ -1,4 +1,3 @@
-import React from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { FilterMethod, FilterStatus, FilterLogLevel } from "../types";
 import "./FilterBar.css";

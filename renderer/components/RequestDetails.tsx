@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { generateCurlCommand, copyToClipboard } from "../utils/curlGenerator";
 import { JsonViewer, TextViewer } from "./JsonViewer";
@@ -53,16 +53,6 @@ export function RequestDetails() {
       </div>
     );
   }
-
-  const formatJson = (text?: string): string => {
-    if (!text) return "";
-    try {
-      const parsed = JSON.parse(text);
-      return JSON.stringify(parsed, null, 2);
-    } catch {
-      return text;
-    }
-  };
 
   const isJson = (text?: string): boolean => {
     if (!text) return false;

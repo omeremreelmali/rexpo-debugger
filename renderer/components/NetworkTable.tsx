@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { RequestState } from "../types";
 import "./NetworkTable.css";
@@ -121,4 +121,3 @@ export function NetworkTable() {
     </div>
   );
 }
-

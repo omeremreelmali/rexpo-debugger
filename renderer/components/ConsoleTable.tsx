@@ -1,6 +1,5 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
-import { ConsoleLog } from "../types";
 import "./ConsoleTable.css";
 
 export function ConsoleTable() {
@@ -109,12 +108,11 @@ function formatArg(arg: any): string {
 
 function formatTime(timestamp: string): string {
   const date = new Date(timestamp);
-  return date.toLocaleTimeString("en-US", {
+  const time = date.toLocaleTimeString("en-US", {
     hour12: false,
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    fractionalSecondDigits: 3,
   });
+  return `${time}.${date.getMilliseconds().toString().padStart(3, "0")}`;
 }
-

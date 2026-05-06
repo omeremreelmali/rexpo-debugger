@@ -1,6 +1,6 @@
 {
   "name": "expo-network-inspector",
-  "version": "1.0.0",
+  "version": "1.1.5",
   "description": "Flipper-like network inspector for Expo/React Native apps",
   "main": "dist/electron/main.js",
   "type": "commonjs",
@@ -75,7 +75,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["arm64", "x64"]
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         }
       ]
     },
@@ -83,7 +86,10 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     },
@@ -91,10 +97,12 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     }
   }
 }
-

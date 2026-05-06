@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { JsonViewer, TextViewer } from "./JsonViewer";
 import "./ConsoleDetails.css";
