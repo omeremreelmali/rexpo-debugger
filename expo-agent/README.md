@@ -125,11 +125,11 @@ Look for an address like 192.168.x.x or 10.0.x.x in the output.
 
 Download the desktop application for your platform:
 
-- **macOS (Apple Silicon)**: [Rexpo Network Inspector-1.0.0-arm64.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
-- **macOS (Intel)**: [Rexpo Network Inspector-1.0.0.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
-- **Windows**: [Rexpo Network Inspector Setup 1.0.0.exe](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
-- **Linux (x64)**: [Rexpo Network Inspector-1.0.0.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
-- **Linux (ARM64)**: [Rexpo Network Inspector-1.0.0-arm64.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
+- **macOS (Apple Silicon)**: [Rexpo Network Inspector-1.1.5-arm64.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5-arm64.dmg)
+- **macOS (Intel)**: [Rexpo Network Inspector-1.1.5.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5.dmg)
+- **Windows**: [Rexpo Network Inspector Setup 1.1.5.exe](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector.Setup.1.1.5.exe)
+- **Linux (x64)**: [Rexpo Network Inspector-1.1.5.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5.AppImage)
+- **Linux (ARM64)**: [Rexpo Network Inspector-1.1.5-arm64.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5-arm64.AppImage)
 
 > 📦 **All releases**: [View all releases on GitHub](https://github.com/omeremreelmali/rexpo-debugger/releases)
 
