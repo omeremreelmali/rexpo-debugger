@@ -151,6 +151,8 @@ function connectSocket(wsUrl: string) {
       // Successful connect — reset backoff for the next disconnect.
       reconnectAttempt = 0;
       clearReconnectTimer();
+      // Flush logs captured during discovery / disconnect.
+      flushSendQueue();
     };
 
     socket.onerror = (e) => {
@@ -369,14 +371,46 @@ function captureStack(): string | undefined {
 }
 
 /**
- * Safe message sending over WebSocket
+ * Pre-connect / disconnect buffer (same idea as in agent.ts).
+ *
+ * Captures console logs while the socket isn't open yet — early-startup logs
+ * fire during the ~2.5s mDNS discovery window and were previously dropped.
+ *
+ * Bounded queue, oldest dropped on overflow.
+ */
+const sendQueue: ConsoleMessage[] = [];
+const MAX_SEND_QUEUE = 500;
+
+function enqueueOrDrop(payload: ConsoleMessage) {
+  if (sendQueue.length >= MAX_SEND_QUEUE) {
+    sendQueue.shift();
+  }
+  sendQueue.push(payload);
+}
+
+function flushSendQueue() {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  if (sendQueue.length === 0) return;
+
+  debugLog(`📤 Flushing ${sendQueue.length} queued console logs`);
+  const drained = sendQueue.splice(0, sendQueue.length);
+  for (const payload of drained) {
+    try {
+      socket.send(JSON.stringify(payload));
+    } catch (e) {
+      errorLog("❌ Flush error, dropping remainder:", e);
+      break;
+    }
+  }
+}
+
+/**
+ * Safe message sending over WebSocket. Queues if socket isn't open yet —
+ * flushed in onopen.
  */
 function safeSend(ws: WebSocket | null, payload: ConsoleMessage) {
-  if (!ws) {
-    return;
-  }
-
-  if (ws.readyState !== WebSocket.OPEN) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    enqueueOrDrop(payload);
     return;
   }
 

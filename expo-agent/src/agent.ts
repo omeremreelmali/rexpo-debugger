@@ -192,6 +192,11 @@ function connectSocket(wsUrl: string) {
       reconnectAttempt = 0;
       clearReconnectTimer();
 
+      // Flush anything captured while the socket was null / connecting —
+      // typically early-startup requests that fired before mDNS discovery
+      // completed, or events from a disconnect window before reconnect.
+      flushSendQueue();
+
       if (healthCheckInterval) clearInterval(healthCheckInterval);
       if (debugMode) {
         healthCheckInterval = setInterval(() => {
@@ -708,20 +713,53 @@ export function initNetworkAgent(options: InitOptions = {}) {
 }
 
 /**
- * Safe message sending over WebSocket
+ * Pre-connect / disconnect buffer.
+ *
+ * Captures network events that fire while the WebSocket is null or not yet
+ * OPEN — typically the first ~2.5s after init (mDNS discovery) and any
+ * disconnect window before auto-reconnect succeeds. Without this buffer
+ * those events were silently dropped.
+ *
+ * The queue is bounded so a long disconnect can't unbounded-grow memory.
+ * On overflow we drop the OLDEST message (FIFO), keeping the most recent
+ * activity — usually what the developer wants to see when reconnecting.
+ */
+const sendQueue: NetworkMessage[] = [];
+const MAX_SEND_QUEUE = 200;
+
+function enqueueOrDrop(payload: NetworkMessage) {
+  if (sendQueue.length >= MAX_SEND_QUEUE) {
+    sendQueue.shift(); // drop oldest
+  }
+  sendQueue.push(payload);
+}
+
+function flushSendQueue() {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  if (sendQueue.length === 0) return;
+
+  debugLog(`[NetworkAgent] 📤 Flushing ${sendQueue.length} queued messages`);
+  // Move queue out before iterating in case sending re-enters via interceptors.
+  const drained = sendQueue.splice(0, sendQueue.length);
+  for (const payload of drained) {
+    try {
+      socket.send(JSON.stringify(payload));
+    } catch (e) {
+      errorLog("[NetworkAgent] ❌ Flush error, dropping remainder:", e);
+      break;
+    }
+  }
+}
+
+/**
+ * Safe message sending over WebSocket. Queues the payload if the socket
+ * isn't open yet — flushed by flushSendQueue() once onopen fires.
  */
 function safeSend(ws: WebSocket | null, payload: NetworkMessage) {
-  if (!ws) {
-    errorLog("[NetworkAgent] ❌ Socket is null, cannot send", payload.type);
-    return;
-  }
-
-  if (ws.readyState !== WebSocket.OPEN) {
-    errorLog(
-      "[NetworkAgent] ❌ Socket not open (state:",
-      ws.readyState,
-      "), cannot send",
-      payload.type
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    enqueueOrDrop(payload);
+    debugLog(
+      `[NetworkAgent] 📥 Queued ${payload.type} (socket not ready, queue size: ${sendQueue.length})`
     );
     return;
   }
