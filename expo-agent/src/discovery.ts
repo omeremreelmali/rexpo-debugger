@@ -173,8 +173,17 @@ export function discoverDebugger(
   return inFlight;
 }
 
-/** Forget the cached discovery result (useful on Wi-Fi change). */
+/**
+ * Forget the cached discovery result so the next call triggers a fresh scan
+ * (useful after Wi-Fi change or a desktop port restart where the cached URL
+ * is no longer valid).
+ *
+ * Important: we deliberately do NOT clear `inFlight`. A scan currently in
+ * progress is something OTHER agents might be `await`ing — killing the
+ * reference here would split a single shared scan into multiple concurrent
+ * ones, which on some native bridges (iOS NSNetService, Android NsdManager)
+ * fights for the same socket and ends in everybody timing out.
+ */
 export function resetDiscoveryCache(): void {
   cached = null;
-  inFlight = null;
 }

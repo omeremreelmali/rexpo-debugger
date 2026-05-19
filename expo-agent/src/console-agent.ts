@@ -207,8 +207,19 @@ export function initConsoleAgent(options: ConsoleAgentOptions = {}) {
   if (wsUrl) {
     connectSocket(wsUrl);
   } else {
+    // Initial discovery: plain call so the in-flight promise is shared with
+    // the Network agent if it started at the same time. Only the reconnect
+    // path needs to invalidate the cache.
     debugLog("🔎 No wsUrl provided — auto-discovering debugger via mDNS");
-    establishConnection(reconnectStrategy);
+    discoverDebugger({ timeoutMs: discoveryTimeoutMs, debug: debugMode })
+      .then((service) => {
+        debugLog(`🎯 Discovered debugger: ${service.name} @ ${service.url}`);
+        connectSocket(service.url);
+      })
+      .catch((err) => {
+        errorLog("❌ Initial auto-discovery failed:", err?.message || err);
+        scheduleReconnect();
+      });
   }
 
   // Override console methods

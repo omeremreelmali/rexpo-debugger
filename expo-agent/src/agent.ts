@@ -294,13 +294,29 @@ export function initNetworkAgent(options: InitOptions = {}) {
   reconnectAttempt = 0;
 
   // Kick off the initial connection. The reconnect machinery takes over from
-  // here whenever the socket drops.
+  // here whenever the socket drops. We intentionally use plain discoverDebugger()
+  // (not establishConnection) on the initial path so the in-flight promise is
+  // SHARED with any other agent (Console + Network) starting at the same time —
+  // only one zeroconf scan is needed.
   if (wsUrl) {
     debugLog("[NetworkAgent] 🔄 Initial connect to:", wsUrl);
     connectSocket(wsUrl);
   } else {
     debugLog("[NetworkAgent] 🔎 No wsUrl provided — auto-discovering debugger via mDNS");
-    establishConnection(reconnectStrategy);
+    discoverDebugger({ timeoutMs: discoveryTimeoutMs, debug: debugMode })
+      .then((service) => {
+        debugLog(
+          `[NetworkAgent] 🎯 Discovered debugger: ${service.name} @ ${service.url}`
+        );
+        connectSocket(service.url);
+      })
+      .catch((err) => {
+        errorLog(
+          "[NetworkAgent] ❌ Initial auto-discovery failed:",
+          err?.message || err
+        );
+        scheduleReconnect();
+      });
   }
 
   // Override global.fetch
