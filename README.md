@@ -129,11 +129,11 @@ This project consists of two main components:
 
 Download the latest release for your platform:
 
-- **macOS (Apple Silicon)**: [Rexpo Network Inspector-1.1.5-arm64.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5-arm64.dmg)
-- **macOS (Intel)**: [Rexpo Network Inspector-1.1.5.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5.dmg)
-- **Windows**: [Rexpo Network Inspector Setup 1.1.5.exe](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector.Setup.1.1.5.exe)
-- **Linux (x64)**: [Rexpo Network Inspector-1.1.5.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5.AppImage)
-- **Linux (ARM64)**: [Rexpo Network Inspector-1.1.5-arm64.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5-arm64.AppImage)
+- **macOS (Apple Silicon)**: [Rexpo Network Inspector-1.2.0-arm64.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.2.0/Rexpo.Network.Inspector-1.2.0-arm64.dmg)
+- **macOS (Intel)**: [Rexpo Network Inspector-1.2.0.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.2.0/Rexpo.Network.Inspector-1.2.0.dmg)
+- **Windows**: [Rexpo Network Inspector Setup 1.2.0.exe](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.2.0/Rexpo.Network.Inspector.Setup.1.2.0.exe)
+- **Linux (x64)**: [Rexpo Network Inspector-1.2.0.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.2.0/Rexpo.Network.Inspector-1.2.0.AppImage)
+- **Linux (ARM64)**: [Rexpo Network Inspector-1.2.0-arm64.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.2.0/Rexpo.Network.Inspector-1.2.0-arm64.AppImage)
 
 > 📦 **All releases**: [View all releases on GitHub](https://github.com/omeremreelmali/rexpo-debugger/releases)
 

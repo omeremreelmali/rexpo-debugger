@@ -1,6 +1,6 @@
 {
   "name": "expo-network-inspector",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "description": "Flipper-like network inspector for Expo/React Native apps",
   "main": "dist/electron/main.js",
   "type": "commonjs",

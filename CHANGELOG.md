@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.2.0] - 2026-05-19
+
+A large release focused on **zero-friction connection** between desktop
+and agent, plus **Settings**, **Collections**, and quality-of-life polish
+on the network workflow.
 
 ### ✨ Added — Collections (saved requests)
 
