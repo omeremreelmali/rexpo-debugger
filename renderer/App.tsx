@@ -63,6 +63,28 @@ function AppContent() {
       // ignore IPC errors — desktop will log them
     });
   }, [settings.connection.autoDetectIp]);
+
+  // Theme: apply `data-theme` to <html> whenever settings.ui.theme changes.
+  // "system" mode also watches prefers-color-scheme so the UI flips along with
+  // the OS appearance while the app is open.
+  useEffect(() => {
+    const root = document.documentElement;
+    const mode = settings.ui.theme;
+
+    if (mode === "dark" || mode === "light") {
+      root.setAttribute("data-theme", mode);
+      return;
+    }
+
+    // "system" — listen to OS changes
+    const mql = window.matchMedia("(prefers-color-scheme: light)");
+    const applySystem = () => {
+      root.setAttribute("data-theme", mql.matches ? "light" : "dark");
+    };
+    applySystem();
+    mql.addEventListener("change", applySystem);
+    return () => mql.removeEventListener("change", applySystem);
+  }, [settings.ui.theme]);
   const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
     const saved = localStorage.getItem(PANEL_WIDTH_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : 50; // Default 50% of viewport

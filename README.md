@@ -58,7 +58,7 @@ A professional debugging tool similar to **Flipper** and **Chrome DevTools** for
 ### General
 
 - 💻 **Cross-platform**: Support for macOS, Windows, and Linux
-- 🎨 **Modern UI**: Dark theme with tab navigation
+- 🎨 **Modern UI**: Dark, light, or system theme — pick from Settings, persists across restarts
 - ⚡ **Lightweight and fast**: Won't slow down your application
 - 🔒 **Development only**: Automatically disabled in production
 
@@ -568,7 +568,7 @@ If you don't want a native rebuild, switch to manual `wsUrl` instead.
 - [x] ✅ Independent Network / Console agent toggles
 - [x] ✅ Max history limits (FIFO trim)
 - [x] ✅ Default log level
-- [ ] Full light/dark theme (CSS variable refactor)
+- [x] ✅ Full light / dark / system theme (CSS variable architecture)
 - [x] ✅ Network port live-restart from Settings (bind-first safety, mDNS re-publish)
 
 ### Console

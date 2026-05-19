@@ -1,0 +1,219 @@
+/**
+ * Theme tokens — used by every component CSS via `var(--token)`.
+ *
+ * The :root block defines the dark-theme defaults (so apps without an explicit
+ * theme attribute keep working).  `[data-theme="light"]` provides light
+ * overrides.  `[data-theme="system"]` is resolved at runtime in App.tsx by
+ * setting `data-theme` to "dark" or "light" based on prefers-color-scheme.
+ *
+ * Token categories:
+ *   Surfaces  — app / panel / elevated / input / alt
+ *   Borders   — default / muted
+ *   Text      — primary / secondary / tertiary / muted / faint / inverse
+ *   Accent    — base / hover / strong + accent-bg / accent-bg-strong
+ *   Status    — success / warning / error (+ matching -bg)
+ *   Overlays  — hover, scrim, shadow stack
+ *   Scrollbar — track / thumb / thumb-hover
+ *   JSON      — string / number / boolean / null / key / bracket
+ *   Badges    — http methods, log levels, status code classes
+ */
+
+:root,
+:root[data-theme="dark"] {
+  /* Surfaces */
+  --app-bg: #1e1e1e;
+  --panel-bg: #2d2d30;
+  --elevated-bg: #252526;
+  --input-bg: #1e1e1e;
+  --alt-bg: #2a2d2e;
+
+  /* Borders */
+  --border: #3e3e42;
+  --border-muted: rgba(62, 62, 66, 0.5);
+
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: #d4d4d4;
+  --text-tertiary: #cccccc;
+  --text-muted: #888888;
+  --text-faint: #6e6e6e;
+  --text-inverse: #1e1e1e;
+
+  /* Accent */
+  --accent: #007acc;
+  --accent-hover: #1177bb;
+  --accent-strong: #0098ff;
+  --accent-bg: rgba(0, 122, 204, 0.1);
+  --accent-bg-strong: #094771;
+
+  /* Status */
+  --success: #4ec9b0;
+  --success-bg: rgba(78, 201, 176, 0.12);
+  --success-glow: rgba(78, 201, 176, 0.6);
+  --warning: #d7ba7d;
+  --warning-bg: rgba(215, 186, 125, 0.12);
+  --warning-border: rgba(215, 186, 125, 0.3);
+  --error: #f48771;
+  --error-bg: rgba(244, 135, 113, 0.1);
+  --error-border: rgba(244, 135, 113, 0.4);
+  --error-strong: #ff4444;
+  --destructive-bg: #6f1717;
+
+  /* Overlays / hover */
+  --hover-overlay: rgba(255, 255, 255, 0.05);
+  --hover-overlay-strong: rgba(255, 255, 255, 0.08);
+  --hover-overlay-soft: rgba(255, 255, 255, 0.03);
+  --scrim: rgba(0, 0, 0, 0.55);
+
+  /* Shadows */
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --shadow-popup: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-context: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  /* Scrollbar */
+  --scrollbar-track: #1e1e1e;
+  --scrollbar-thumb: #424242;
+  --scrollbar-thumb-hover: #4e4e4e;
+
+  /* JSON syntax (VS Code Dark+) */
+  --json-string: #ce9178;
+  --json-number: #b5cea8;
+  --json-boolean: #569cd6;
+  --json-null: #569cd6;
+  --json-key: #9cdcfe;
+  --json-bracket: #dcdcaa;
+  --json-bg-hover: rgba(255, 255, 255, 0.03);
+
+  /* HTTP method badges */
+  --method-get: #4ec9b0;
+  --method-post: #d7ba7d;
+  --method-put: #569cd6;
+  --method-patch: #c586c0;
+  --method-delete: #f48771;
+  --method-options: #8a8a8a;
+  --method-default-bg: rgba(255, 255, 255, 0.06);
+
+  /* Status code badges */
+  --status-success: #4ec9b0;
+  --status-redirect: #d7ba7d;
+  --status-client-error: #f48771;
+  --status-server-error: #ff4444;
+  --status-error-text: #ff8866;
+
+  /* Console log levels */
+  --log-warn-stripe: #ffa500;
+  --log-warn-bg: rgba(255, 165, 0, 0.2);
+  --log-error-stripe: #ff4444;
+  --log-error-bg: rgba(255, 68, 68, 0.2);
+  --log-info-stripe: #1e90ff;
+  --log-info-bg: rgba(30, 144, 255, 0.2);
+  --log-log-stripe: #00bfff;
+  --log-log-bg: rgba(0, 191, 255, 0.2);
+  --log-debug-stripe: #9370db;
+  --log-debug-bg: rgba(147, 112, 219, 0.2);
+
+  /* Selected row backgrounds (subtle hover variants of accent) */
+  --row-hover-bg: rgba(0, 122, 204, 0.15);
+
+  color-scheme: dark;
+}
+
+/* ─── Light theme ───────────────────────────────────────────────────────── */
+:root[data-theme="light"] {
+  /* Surfaces */
+  --app-bg: #ffffff;
+  --panel-bg: #f3f3f3;
+  --elevated-bg: #ffffff;
+  --input-bg: #ffffff;
+  --alt-bg: #f8f8f8;
+
+  /* Borders */
+  --border: #d4d4d4;
+  --border-muted: rgba(0, 0, 0, 0.08);
+
+  /* Text */
+  --text-primary: #1e1e1e;
+  --text-secondary: #333333;
+  --text-tertiary: #444444;
+  --text-muted: #777777;
+  --text-faint: #999999;
+  --text-inverse: #ffffff;
+
+  /* Accent — slightly darker so it has contrast on white */
+  --accent: #006fb8;
+  --accent-hover: #0078d4;
+  --accent-strong: #0084e0;
+  --accent-bg: rgba(0, 111, 184, 0.08);
+  --accent-bg-strong: rgba(0, 111, 184, 0.18);
+
+  /* Status — readable equivalents on light surfaces */
+  --success: #1e7a5f;
+  --success-bg: rgba(30, 122, 95, 0.1);
+  --success-glow: rgba(30, 122, 95, 0.35);
+  --warning: #9a6200;
+  --warning-bg: rgba(154, 98, 0, 0.1);
+  --warning-border: rgba(154, 98, 0, 0.3);
+  --error: #c63730;
+  --error-bg: rgba(198, 55, 48, 0.08);
+  --error-border: rgba(198, 55, 48, 0.35);
+  --error-strong: #c63730;
+  --destructive-bg: #fee2e2;
+
+  /* Overlays — invert the alpha base */
+  --hover-overlay: rgba(0, 0, 0, 0.05);
+  --hover-overlay-strong: rgba(0, 0, 0, 0.08);
+  --hover-overlay-soft: rgba(0, 0, 0, 0.03);
+  --scrim: rgba(0, 0, 0, 0.35);
+
+  /* Shadows — softer for light */
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.15);
+  --shadow-popup: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-context: 0 8px 24px rgba(0, 0, 0, 0.18);
+
+  /* Scrollbar */
+  --scrollbar-track: #f5f5f5;
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-thumb-hover: #a8a8a8;
+
+  /* JSON syntax (VS Code Light+) */
+  --json-string: #a31515;
+  --json-number: #098658;
+  --json-boolean: #0000ff;
+  --json-null: #0000ff;
+  --json-key: #001080;
+  --json-bracket: #795e26;
+  --json-bg-hover: rgba(0, 0, 0, 0.03);
+
+  /* HTTP method badges */
+  --method-get: #1e7a5f;
+  --method-post: #9a6200;
+  --method-put: #006fb8;
+  --method-patch: #8a1aa6;
+  --method-delete: #c63730;
+  --method-options: #6e6e6e;
+  --method-default-bg: rgba(0, 0, 0, 0.06);
+
+  /* Status code badges */
+  --status-success: #1e7a5f;
+  --status-redirect: #9a6200;
+  --status-client-error: #c63730;
+  --status-server-error: #aa0e0e;
+  --status-error-text: #c63730;
+
+  /* Console log levels */
+  --log-warn-stripe: #b85b00;
+  --log-warn-bg: rgba(184, 91, 0, 0.12);
+  --log-error-stripe: #c63730;
+  --log-error-bg: rgba(198, 55, 48, 0.12);
+  --log-info-stripe: #006fb8;
+  --log-info-bg: rgba(0, 111, 184, 0.12);
+  --log-log-stripe: #0070b8;
+  --log-log-bg: rgba(0, 112, 184, 0.1);
+  --log-debug-stripe: #7a3eae;
+  --log-debug-bg: rgba(122, 62, 174, 0.12);
+
+  /* Selected row */
+  --row-hover-bg: rgba(0, 111, 184, 0.1);
+
+  color-scheme: light;
+}

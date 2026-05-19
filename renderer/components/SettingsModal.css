@@ -1,7 +1,7 @@
 .settings-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -21,10 +21,10 @@
 .settings-modal {
   width: min(560px, 90vw);
   max-height: 85vh;
-  background: #252526;
-  border: 1px solid #3e3e42;
+  background: var(--elevated-bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-modal);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -35,14 +35,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid #3e3e42;
-  background: #2d2d30;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
 }
 
 .settings-header h2 {
   font-size: 14px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0;
   letter-spacing: 0.3px;
 }
@@ -50,7 +50,7 @@
 .settings-close {
   background: transparent;
   border: none;
-  color: #cccccc;
+  color: var(--text-tertiary);
   font-size: 16px;
   cursor: pointer;
   width: 28px;
@@ -63,8 +63,8 @@
 }
 
 .settings-close:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  background: var(--hover-overlay-strong);
+  color: var(--text-primary);
 }
 
 .settings-body {
@@ -75,7 +75,7 @@
 
 .settings-section {
   padding: 12px 0;
-  border-bottom: 1px solid rgba(62, 62, 66, 0.5);
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .settings-section:last-child {
@@ -85,7 +85,7 @@
 .settings-section-title {
   font-size: 12px;
   font-weight: 600;
-  color: #888;
+  color: var(--text-muted);
   margin: 0 0 10px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -110,7 +110,7 @@
 
 .settings-row-label > span:first-child {
   font-size: 13px;
-  color: #d4d4d4;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -118,7 +118,7 @@
 
 .settings-row-hint {
   font-size: 11px;
-  color: #6e6e6e;
+  color: var(--text-faint);
   font-weight: normal;
   line-height: 1.4;
 }
@@ -128,9 +128,9 @@
   font-weight: 600;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: #d7ba7d;
-  background: rgba(215, 186, 125, 0.12);
-  border: 1px solid rgba(215, 186, 125, 0.3);
+  color: var(--warning);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
   padding: 2px 6px;
   border-radius: 3px;
   white-space: nowrap;
@@ -140,7 +140,7 @@
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #007acc;
+  accent-color: var(--accent);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -149,10 +149,10 @@
 .settings-row input[type="text"] {
   width: 160px;
   padding: 5px 8px;
-  background: #1e1e1e;
-  border: 1px solid #3e3e42;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: #cccccc;
+  color: var(--text-tertiary);
   font-size: 12px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
   outline: none;
@@ -164,16 +164,16 @@
 }
 
 .settings-row input:focus {
-  border-color: #007acc;
+  border-color: var(--accent);
 }
 
 .settings-row select {
   width: 160px;
   padding: 5px 8px;
-  background: #1e1e1e;
-  border: 1px solid #3e3e42;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: #cccccc;
+  color: var(--text-tertiary);
   font-size: 12px;
   outline: none;
   cursor: pointer;
@@ -181,7 +181,7 @@
 }
 
 .settings-row select:focus {
-  border-color: #007acc;
+  border-color: var(--accent);
 }
 
 .settings-row-port-controls {
@@ -208,7 +208,7 @@
 }
 
 .settings-row-apply:hover:not(:disabled) {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .settings-row-apply:disabled {
@@ -229,18 +229,18 @@
 }
 
 .settings-row-status.applying {
-  color: #d7ba7d;
-  background: rgba(215, 186, 125, 0.1);
+  color: var(--warning);
+  background: var(--warning-bg);
 }
 
 .settings-row-status.success {
-  color: #4ec9b0;
-  background: rgba(78, 201, 176, 0.1);
+  color: var(--success);
+  background: var(--success-bg);
 }
 
 .settings-row-status.error {
-  color: #f48771;
-  background: rgba(244, 135, 113, 0.1);
+  color: var(--error);
+  background: var(--error-bg);
 }
 
 .settings-footer {
@@ -248,8 +248,8 @@
   justify-content: space-between;
   gap: 8px;
   padding: 12px 18px;
-  border-top: 1px solid #3e3e42;
-  background: #2d2d30;
+  border-top: 1px solid var(--border);
+  background: var(--panel-bg);
 }
 
 .settings-reset,
@@ -264,13 +264,13 @@
 
 .settings-reset {
   background: transparent;
-  color: #cccccc;
-  border: 1px solid #3e3e42;
+  color: var(--text-tertiary);
+  border: 1px solid var(--border);
 }
 
 .settings-reset:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  background: var(--hover-overlay);
+  color: var(--text-primary);
 }
 
 .settings-done {
@@ -280,5 +280,5 @@
 }
 
 .settings-done:hover {
-  background: #1177bb;
+  background: var(--accent-hover);
 }

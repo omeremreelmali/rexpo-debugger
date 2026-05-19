@@ -24,6 +24,31 @@ declare global {
   }
 }
 
+/**
+ * Apply the persisted theme synchronously, BEFORE React mounts, so the user
+ * never sees a flash of the wrong theme. We deliberately read from
+ * localStorage here instead of waiting for the SettingsContext to hydrate.
+ */
+(function applyThemeEarly() {
+  try {
+    const raw = localStorage.getItem("rexpo-debugger-settings");
+    let theme = "dark";
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      theme = parsed?.ui?.theme || "dark";
+    }
+    const resolved =
+      theme === "system"
+        ? window.matchMedia("(prefers-color-scheme: light)").matches
+          ? "light"
+          : "dark"
+        : theme;
+    document.documentElement.setAttribute("data-theme", resolved);
+  } catch {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }
+})();
+
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );

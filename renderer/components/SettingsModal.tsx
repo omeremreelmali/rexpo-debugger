@@ -21,19 +21,6 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: "system", label: "System" },
 ];
 
-/**
- * A small inline tag that flags a setting as not yet wired to runtime
- * behaviour. The setting is still persisted to localStorage — it will be
- * wired in a future release.
- */
-function ComingSoonTag() {
-  return (
-    <span className="setting-pending" title="Bu ayar henüz canlı davranışa bağlı değil — yakında">
-      Yakında
-    </span>
-  );
-}
-
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, updateSettings, resetSettings } = useSettings();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -364,9 +351,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Theme</span>
-                <ComingSoonTag />
                 <span className="settings-row-hint">
-                  Şu an sadece koyu tema mevcut
+                  System seçilirse işletim sisteminin görünümünü takip eder
                 </span>
               </div>
               <select

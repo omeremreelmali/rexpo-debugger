@@ -3,23 +3,23 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background: #252526;
+  background: var(--elevated-bg);
 }
 
 .console-header {
   display: flex;
-  background: #2d2d30;
-  border-bottom: 1px solid #3e3e42;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
   font-size: 11px;
   font-weight: 600;
-  color: #cccccc;
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .console-header-cell {
   padding: 8px 12px;
-  border-right: 1px solid #3e3e42;
+  border-right: 1px solid var(--border);
 }
 
 .console-header-cell.level {
@@ -45,7 +45,7 @@
 
 .console-row {
   display: flex;
-  border-bottom: 1px solid #2d2d30;
+  border-bottom: 1px solid var(--border-muted);
   cursor: pointer;
   transition: background-color 0.1s ease;
   font-size: 13px;
@@ -53,36 +53,37 @@
 }
 
 .console-row:hover {
-  background: #2a2d2e;
+  background: var(--alt-bg);
 }
 
 .console-row.selected {
-  background: #094771;
+  background: var(--accent-bg-strong);
 }
 
 .console-row.selected:hover {
-  background: #0e5a8e;
+  background: var(--accent-bg-strong);
+  filter: brightness(1.08);
 }
 
 /* Level colors */
 .console-row.level-log {
-  border-left: 3px solid #1e90ff;
+  border-left: 3px solid var(--log-log-stripe);
 }
 
 .console-row.level-info {
-  border-left: 3px solid #00bfff;
+  border-left: 3px solid var(--log-info-stripe);
 }
 
 .console-row.level-warn {
-  border-left: 3px solid #ffa500;
+  border-left: 3px solid var(--log-warn-stripe);
 }
 
 .console-row.level-error {
-  border-left: 3px solid #ff4444;
+  border-left: 3px solid var(--log-error-stripe);
 }
 
 .console-row.level-debug {
-  border-left: 3px solid #9370db;
+  border-left: 3px solid var(--log-debug-stripe);
 }
 
 .console-cell {
@@ -102,13 +103,13 @@
 .console-cell.message {
   flex: 1;
   min-width: 0;
-  color: #d4d4d4;
+  color: var(--text-secondary);
 }
 
 .console-cell.timestamp {
   width: 140px;
   flex-shrink: 0;
-  color: #858585;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -122,28 +123,28 @@
 }
 
 .level-badge.log {
-  background: rgba(30, 144, 255, 0.2);
-  color: #1e90ff;
+  background: var(--log-log-bg);
+  color: var(--log-log-stripe);
 }
 
 .level-badge.info {
-  background: rgba(0, 191, 255, 0.2);
-  color: #00bfff;
+  background: var(--log-info-bg);
+  color: var(--log-info-stripe);
 }
 
 .level-badge.warn {
-  background: rgba(255, 165, 0, 0.2);
-  color: #ffa500;
+  background: var(--log-warn-bg);
+  color: var(--log-warn-stripe);
 }
 
 .level-badge.error {
-  background: rgba(255, 68, 68, 0.2);
-  color: #ff4444;
+  background: var(--log-error-bg);
+  color: var(--log-error-stripe);
 }
 
 .level-badge.debug {
-  background: rgba(147, 112, 219, 0.2);
-  color: #9370db;
+  background: var(--log-debug-bg);
+  color: var(--log-debug-stripe);
 }
 
 .console-empty {
@@ -152,7 +153,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #858585;
+  color: var(--text-muted);
   gap: 8px;
   padding: 40px;
   text-align: center;
@@ -165,6 +166,5 @@
 
 .console-empty small {
   font-size: 12px;
-  color: #6e6e6e;
+  color: var(--text-faint);
 }
-

@@ -1,8 +1,8 @@
 /* JSON Tree Viewer */
 .json-viewer-tree {
   padding: 12px;
-  background: #1e1e1e;
-  border: 1px solid #3e3e42;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
   border-radius: 4px;
   overflow-x: auto;
   overflow-y: auto;
@@ -10,7 +10,7 @@
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.6;
-  color: #d4d4d4;
+  color: var(--text-secondary);
 }
 
 .json-viewer-tree::-webkit-scrollbar {
@@ -19,16 +19,16 @@
 }
 
 .json-viewer-tree::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: var(--scrollbar-track);
 }
 
 .json-viewer-tree::-webkit-scrollbar-thumb {
-  background: #424242;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 .json-viewer-tree::-webkit-scrollbar-thumb:hover {
-  background: #4e4e4e;
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* JSON Node Structure */
@@ -45,12 +45,12 @@
 }
 
 .json-line:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--json-bg-hover);
 }
 
 .json-children {
   margin-left: 20px;
-  border-left: 1px solid #3e3e42;
+  border-left: 1px solid var(--border);
   padding-left: 8px;
 }
 
@@ -58,7 +58,7 @@
 .json-toggle {
   background: none;
   border: none;
-  color: #858585;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0;
   margin-right: 4px;
@@ -72,8 +72,8 @@
 }
 
 .json-toggle:hover {
-  color: #cccccc;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-tertiary);
+  background: var(--hover-overlay-strong);
   border-radius: 2px;
 }
 
@@ -93,50 +93,50 @@
 
 /* JSON Syntax Elements */
 .json-key {
-  color: #9cdcfe;
+  color: var(--json-key);
   font-weight: 500;
 }
 
 .json-colon {
-  color: #cccccc;
+  color: var(--text-tertiary);
   margin: 0 4px;
 }
 
 .json-string {
-  color: #ce9178;
+  color: var(--json-string);
 }
 
 .json-number {
-  color: #b5cea8;
+  color: var(--json-number);
 }
 
 .json-boolean {
-  color: #569cd6;
+  color: var(--json-boolean);
   font-weight: 600;
 }
 
 .json-null {
-  color: #569cd6;
+  color: var(--json-null);
   font-weight: 600;
 }
 
 .json-bracket {
-  color: #cccccc;
+  color: var(--text-tertiary);
 }
 
 .json-comma {
-  color: #cccccc;
+  color: var(--text-tertiary);
   margin-left: 2px;
 }
 
 .json-ellipsis {
-  color: #858585;
+  color: var(--text-muted);
   margin: 0 4px;
   font-style: italic;
 }
 
 .json-count {
-  color: #858585;
+  color: var(--text-muted);
   font-size: 11px;
   margin-left: 6px;
   font-style: italic;
@@ -146,8 +146,8 @@
 .text-viewer {
   margin: 0;
   padding: 16px;
-  background: #1e1e1e;
-  border: 1px solid #3e3e42;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
   border-radius: 4px;
   overflow-x: auto;
   overflow-y: auto;
@@ -155,7 +155,7 @@
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.6;
-  color: #cccccc;
+  color: var(--text-tertiary);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -166,14 +166,14 @@
 }
 
 .text-viewer::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: var(--scrollbar-track);
 }
 
 .text-viewer::-webkit-scrollbar-thumb {
-  background: #424242;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 .text-viewer::-webkit-scrollbar-thumb:hover {
-  background: #4e4e4e;
+  background: var(--scrollbar-thumb-hover);
 }

@@ -2,7 +2,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #1e1e1e;
+  background: var(--app-bg);
   overflow: hidden;
 }
 
@@ -11,14 +11,14 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #858585;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
 .console-details-header {
   padding: 16px;
-  background: #252526;
-  border-bottom: 1px solid #3e3e42;
+  background: var(--elevated-bg);
+  border-bottom: 1px solid var(--border);
 }
 
 .console-details-title {
@@ -28,7 +28,7 @@
 }
 
 .console-details-timestamp {
-  color: #858585;
+  color: var(--text-muted);
   font-size: 12px;
   font-family: 'Consolas', 'Courier New', monospace;
 }
@@ -50,28 +50,28 @@
 .console-details-section-title {
   font-size: 11px;
   font-weight: 600;
-  color: #858585;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid #3e3e42;
+  border-bottom: 1px solid var(--border);
 }
 
 .console-details-section-content {
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: 13px;
-  color: #d4d4d4;
+  color: var(--text-secondary);
 }
 
 .console-details-section-content pre {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
-  background: #252526;
+  background: var(--elevated-bg);
   padding: 12px;
   border-radius: 4px;
-  border: 1px solid #3e3e42;
+  border: 1px solid var(--border);
   overflow-x: auto;
 }
 
@@ -80,9 +80,9 @@
   gap: 12px;
   margin-bottom: 12px;
   padding: 8px;
-  background: #252526;
+  background: var(--elevated-bg);
   border-radius: 4px;
-  border: 1px solid #3e3e42;
+  border: 1px solid var(--border);
 }
 
 .console-arg:last-child {
@@ -90,7 +90,7 @@
 }
 
 .console-arg-index {
-  color: #858585;
+  color: var(--text-muted);
   font-weight: 600;
   flex-shrink: 0;
   font-size: 11px;
@@ -109,11 +109,11 @@
   background: transparent;
   padding: 0;
   border: none;
-  color: #d4d4d4;
+  color: var(--text-secondary);
 }
 
 .console-stack {
-  color: #ff8866 !important;
+  color: var(--error) !important;
   line-height: 1.6;
 }
 
@@ -127,27 +127,26 @@
 }
 
 .level-badge.log {
-  background: rgba(30, 144, 255, 0.2);
-  color: #1e90ff;
+  background: var(--log-log-bg);
+  color: var(--log-log-stripe);
 }
 
 .level-badge.info {
-  background: rgba(0, 191, 255, 0.2);
-  color: #00bfff;
+  background: var(--log-info-bg);
+  color: var(--log-info-stripe);
 }
 
 .level-badge.warn {
-  background: rgba(255, 165, 0, 0.2);
-  color: #ffa500;
+  background: var(--log-warn-bg);
+  color: var(--log-warn-stripe);
 }
 
 .level-badge.error {
-  background: rgba(255, 68, 68, 0.2);
-  color: #ff4444;
+  background: var(--log-error-bg);
+  color: var(--log-error-stripe);
 }
 
 .level-badge.debug {
-  background: rgba(147, 112, 219, 0.2);
-  color: #9370db;
+  background: var(--log-debug-bg);
+  color: var(--log-debug-stripe);
 }
-

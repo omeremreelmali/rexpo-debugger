@@ -1,7 +1,7 @@
 .network-table-container {
   flex: 1;
   overflow-y: auto;
-  background: #1e1e1e;
+  background: var(--app-bg);
 }
 
 .empty-state {
@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #858585;
+  color: var(--text-muted);
   padding: 40px;
 }
 
@@ -26,7 +26,7 @@
 
 .empty-state-hint {
   font-size: 12px;
-  color: #6c6c6c;
+  color: var(--text-faint);
 }
 
 .network-table {
@@ -38,8 +38,8 @@
 .network-table thead {
   position: sticky;
   top: 0;
-  background: #252526;
-  border-bottom: 1px solid #3e3e42;
+  background: var(--elevated-bg);
+  border-bottom: 1px solid var(--border);
   z-index: 10;
 }
 
@@ -47,29 +47,29 @@
   text-align: left;
   padding: 8px 12px;
   font-weight: 500;
-  color: #cccccc;
+  color: var(--text-tertiary);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .network-table tbody tr {
-  border-bottom: 1px solid #2d2d30;
+  border-bottom: 1px solid var(--border-muted);
   cursor: pointer;
   transition: background 0.1s;
 }
 
 .network-table tbody tr:hover {
-  background: #2a2d2e;
+  background: var(--alt-bg);
 }
 
 .network-table tbody tr.selected {
-  background: #094771 !important;
+  background: var(--accent-bg-strong) !important;
 }
 
 .network-table td {
   padding: 8px 12px;
-  color: #cccccc;
+  color: var(--text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -86,41 +86,35 @@
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
+  color: #ffffff;
 }
 
 .method-get {
-  background: #0e639c;
-  color: #ffffff;
+  background: var(--method-get);
 }
 
 .method-post {
-  background: #49b84c;
-  color: #ffffff;
+  background: var(--method-post);
 }
 
 .method-put {
-  background: #ce9178;
-  color: #ffffff;
+  background: var(--method-put);
 }
 
 .method-delete {
-  background: #f48771;
-  color: #ffffff;
+  background: var(--method-delete);
 }
 
 .method-patch {
-  background: #dcdcaa;
-  color: #000000;
+  background: var(--method-patch);
 }
 
 .method-options {
-  background: #9cdcfe;
-  color: #000000;
+  background: var(--method-options);
 }
 
 .method-unknown {
-  background: #6c6c6c;
-  color: #ffffff;
+  background: var(--text-muted);
 }
 
 .status-badge {
@@ -128,30 +122,25 @@
   border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
+  color: #ffffff;
 }
 
 .status-success {
-  background: #49b84c;
-  color: #ffffff;
+  background: var(--status-success);
 }
 
 .status-redirect {
-  background: #dcdcaa;
-  color: #000000;
+  background: var(--status-redirect);
 }
 
 .status-client-error {
-  background: #ce9178;
-  color: #ffffff;
+  background: var(--status-client-error);
 }
 
 .status-server-error {
-  background: #f48771;
-  color: #ffffff;
+  background: var(--status-server-error);
 }
 
 .status-error {
-  background: #f14c4c;
-  color: #ffffff;
+  background: var(--error-strong);
 }
-

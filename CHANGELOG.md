@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Added — Full light theme (RED-160 follow-up)
+
+- 🎨 Complete CSS-variable refactor: every component reads its colors from a
+  semantic token system in `renderer/theme.css` (surfaces, borders, text,
+  accent, status, overlays, scrollbar, shadows, JSON syntax, HTTP method
+  badges, console log levels, status code badges).
+- 🌗 Three theme modes:
+  - **Dark** — the existing VS Code Dark+ inspired palette.
+  - **Light** — a fresh VS Code Light+ inspired palette with adjusted
+    accent / warning / error hues for legibility on white surfaces.
+  - **System** — follows `prefers-color-scheme` and updates live when the
+    OS appearance changes while the app is open.
+- ⚡ **No FOUC** — the theme is applied synchronously in `main.tsx`
+  before React mounts, reading from `localStorage` directly.
+- 🧰 New tokens cover special cases (JSON syntax highlight, HTTP method
+  badges, console log level stripes) so they remain readable on both
+  themes instead of being washed out.
+
 ### ✨ Added — Network port live-restart (RED-160 follow-up)
 
 - 🔁 Changing the port in Settings + clicking **Apply** now actually switches the WS server to the new port — no Electron restart needed.
