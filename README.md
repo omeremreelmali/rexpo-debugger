@@ -40,6 +40,14 @@ A professional debugging tool similar to **Flipper** and **Chrome DevTools** for
 - 🧭 **Live connection chip**: Desktop header shows the detected IP(s) with a copy button and a status dot for connected clients
 - 🔁 **Auto-reconnect**: Agent reconnects on its own after desktop restarts, port changes, Wi-Fi blips, or VPN toggles — no app reload needed (exponential backoff: 1s → 2s → 4s → 8s → 10s cap)
 
+### Collections — saved requests (NEW)
+
+- 📚 **Collections tab**: save any captured request for later replay — no need to keep noisy traffic in the panel just to keep a single useful call
+- 🗂 **Group by project / collection** (all metadata optional): name, collection, tags, description
+- ⚡ **One-click Replay** from the saved entry, or **Edit & Replay…** to tweak before sending
+- 📝 Rename, move between collections, delete — full lifecycle from the right-click menu
+- 💾 Persisted in `localStorage` — survives app restarts
+
 ### Settings (NEW)
 
 - ⚙ **Settings modal**: Manage history limits, default log level, manual host overrides, agent toggles, mDNS on/off, and more from the header
@@ -549,8 +557,9 @@ If you don't want a native rebuild, switch to manual `wsUrl` instead.
 - [ ] GraphQL query/mutation visualization
 - [x] ✅ Request replay feature
 - [x] ✅ **Edit & Replay** — modify method / URL / **query params** / headers / body before re-sending
-- [x] ✅ Right-click context menu (copy URL, cURL, JSON, replay, **save response to file**, delete)
+- [x] ✅ Right-click context menu (copy URL, cURL, JSON, replay, **save response to file**, **save to collection**, delete)
 - [x] ✅ Toast feedback for copy / save actions
+- [x] ✅ **Collections** — saved requests grouped by project, with optional name / tags / description
 - [ ] Mock response feature
 
 ### Discovery & Connection

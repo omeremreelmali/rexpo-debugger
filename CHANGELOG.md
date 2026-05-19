@@ -4,6 +4,45 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Added — Collections (saved requests)
+
+A new third tab next to Network and Console lets you save any captured
+request to a named collection and replay it whenever you want — without
+keeping the original traffic in the panel.
+
+UI:
+
+- 📚 **Collections tab** with a count badge. Left: collapsible tree
+  grouped by collection (project) name. Right: details + actions for
+  the selected saved request.
+- Right-click any row in the Network panel → **Save to collection…**
+  opens a modal. All fields are optional: name, collection (pick
+  existing or "+ New"), tags (comma-separated, shown as chips),
+  description. If you save with nothing filled in, the request lands
+  in an **Uncategorized** bucket with an auto-derived label like
+  `GET /api/users?id=42`.
+- Right-click a saved request for: **Replay**, **Edit & Replay…**,
+  **Rename / edit metadata…**, **Move to another collection…**,
+  **Copy URL**, **Copy as cURL**, **Delete**.
+- Details pane shows the URL, headers, body, tags, description,
+  collection, and created / updated timestamps. The same actions
+  are also exposed as buttons.
+
+Persistence:
+
+- Saved under `rexpo-debugger-collections` in localStorage — survives
+  restarts and works alongside other Settings state.
+- Defensive deserialization: malformed storage falls back to an empty
+  collection list rather than throwing.
+
+Architecture:
+
+- New `CollectionsContext` exposes `state`, `saveRequest`,
+  `updateRequest`, `deleteRequest`, `moveRequest` and a derived
+  `collectionNames` list (Uncategorized always last).
+- `useCollections()` hook + a small `defaultRequestLabel()` helper that
+  builds a readable label when no name was provided.
+
 ### ✨ Added — Agent auto-reconnect
 
 The agent now reconnects to the desktop debugger on its own — no app reload

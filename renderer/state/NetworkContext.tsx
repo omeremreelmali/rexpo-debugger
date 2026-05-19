@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect, useRef, ReactN
 import { NetworkMessage, RequestState, FilterMethod, FilterStatus, ConsoleLog, FilterLogLevel } from "../types";
 import { useSettings } from "./SettingsContext";
 
-type TabType = "network" | "console";
+type TabType = "network" | "console" | "collections";
 
 interface NetworkState {
   requests: RequestState[];

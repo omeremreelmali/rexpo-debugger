@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { NetworkProvider, useNetwork } from "./state/NetworkContext";
 import { SettingsProvider, useSettings } from "./state/SettingsContext";
+import { CollectionsProvider, useCollections } from "./state/CollectionsContext";
 import { ToastProvider } from "./components/Toast";
 import { FilterBar } from "./components/FilterBar";
 import { NetworkTable } from "./components/NetworkTable";
 import { RequestDetails } from "./components/RequestDetails";
 import { ConsoleTable } from "./components/ConsoleTable";
 import { ConsoleDetails } from "./components/ConsoleDetails";
+import { CollectionsPanel } from "./components/CollectionsPanel";
 import "./App.css";
 
 const PANEL_WIDTH_STORAGE_KEY = "rexpo-debugger-panel-width";
@@ -180,28 +182,59 @@ function AppContent() {
             <span className="tab-count">{state.consoleLogs.length}</span>
           )}
         </button>
+        <CollectionsTabButton
+          isActive={state.activeTab === "collections"}
+          onClick={() => dispatch({ type: "SET_ACTIVE_TAB", payload: "collections" })}
+        />
       </div>
 
       {/* Main Content */}
+      {state.activeTab === "collections" ? (
+        <CollectionsPanel />
+      ) : (
         <div className="main-content" ref={mainContentRef}>
-          <div 
+          <div
             className="left-panel"
             style={{ width: `${leftPanelWidth}%` }}
           >
-          {state.activeTab === "network" ? <NetworkTable /> : <ConsoleTable />}
+            {state.activeTab === "network" ? <NetworkTable /> : <ConsoleTable />}
           </div>
-          <div 
+          <div
             className={`resizer ${isDragging ? "dragging" : ""}`}
             onMouseDown={handleMouseDown}
           />
-          <div 
+          <div
             className="right-panel"
             style={{ width: `${100 - leftPanelWidth}%` }}
           >
-          {state.activeTab === "network" ? <RequestDetails /> : <ConsoleDetails />}
+            {state.activeTab === "network" ? <RequestDetails /> : <ConsoleDetails />}
+          </div>
         </div>
-      </div>
+      )}
     </div>
+  );
+}
+
+function CollectionsTabButton({
+  isActive,
+  onClick,
+}: {
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const { state } = useCollections();
+  return (
+    <button
+      className={`tab-button ${isActive ? "active" : ""}`}
+      onClick={onClick}
+      type="button"
+    >
+      <span className="tab-icon">📚</span>
+      Collections
+      {state.savedRequests.length > 0 && (
+        <span className="tab-count">{state.savedRequests.length}</span>
+      )}
+    </button>
   );
 }
 
@@ -209,9 +242,11 @@ export function App() {
   return (
     <SettingsProvider>
       <ToastProvider>
-        <NetworkProvider>
-          <AppContent />
-        </NetworkProvider>
+        <CollectionsProvider>
+          <NetworkProvider>
+            <AppContent />
+          </NetworkProvider>
+        </CollectionsProvider>
       </ToastProvider>
     </SettingsProvider>
   );

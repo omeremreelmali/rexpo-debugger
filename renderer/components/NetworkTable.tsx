@@ -7,6 +7,7 @@ import { replayRequest } from "../utils/replayRequest";
 import { saveResponseToFile } from "../utils/saveResponse";
 import { ContextMenu, ContextMenuItem } from "./ContextMenu";
 import { EditReplayModal } from "./EditReplayModal";
+import { SaveRequestModal } from "./SaveRequestModal";
 import { useToast } from "./Toast";
 import "./NetworkTable.css";
 
@@ -22,6 +23,7 @@ export function NetworkTable() {
   const toast = useToast();
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [editTarget, setEditTarget] = useState<RequestState | null>(null);
+  const [saveTarget, setSaveTarget] = useState<RequestState | null>(null);
 
   const copyWithToast = async (text: string, label: string) => {
     const ok = await copyToClipboard(text);
@@ -148,6 +150,12 @@ export function NetworkTable() {
         label: "Edit & Replay…",
         onClick: () => setEditTarget(request),
       },
+      {
+        id: "save-request",
+        icon: "📚",
+        label: "Save to collection…",
+        onClick: () => setSaveTarget(request),
+      },
       { id: "sep-2", label: "", separator: true },
       {
         id: "delete",
@@ -242,6 +250,13 @@ export function NetworkTable() {
         <EditReplayModal
           request={editTarget}
           onClose={() => setEditTarget(null)}
+        />
+      )}
+
+      {saveTarget && (
+        <SaveRequestModal
+          source={saveTarget}
+          onClose={() => setSaveTarget(null)}
         />
       )}
     </div>
