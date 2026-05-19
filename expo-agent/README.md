@@ -12,11 +12,18 @@ Professional debugging tool for Expo and React Native apps. Inspect network traf
 - ✅ **axios** (with interceptors, automatically detected)
 - ✅ Custom axios instances (via `addAxiosInstance()`)
 
-### Console Monitoring (NEW! 🎉)
+### Console Monitoring
 
 - ✅ **All console methods** (log, warn, error, info, debug)
 - ✅ **Stack traces** for errors and warnings
 - ✅ **Rich formatting** (objects, arrays, errors, dates, etc.)
+
+### Zero-config Auto-Discovery (NEW! 🎉)
+
+- ✅ **No more hardcoded IPs** — the agent finds the desktop debugger over your local Wi-Fi automatically via mDNS / Bonjour
+- ✅ **Survives Wi-Fi changes** — when your machine's IP changes, the agent reconnects without code edits
+- ✅ **Expo config plugin** — required iOS/Android permissions are injected automatically; you never edit `Info.plist` or `AndroidManifest.xml`
+- ✅ **Production-safe** — permissions and runtime code are stripped from release builds
 
 <img width="1400" alt="Rexpo Debugger Console View" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/debug-console-screenshot.png">
 
@@ -24,193 +31,259 @@ Professional debugging tool for Expo and React Native apps. Inspect network traf
 
 Rexpo Debugger consists of two parts:
 
-1. **Desktop Inspector** (Electron app) - Must be running on your computer
-2. **npm package** - Installed in your Expo app
+1. **Desktop Inspector** (Electron app) — runs on your computer, listens on port 5051, publishes itself via mDNS as `_rexpo._tcp`
+2. **npm package** — installed in your Expo app, connects to the desktop over WebSocket
 
-Your Expo app connects to the desktop inspector via WebSocket to send network/console data.
+```
+┌─────────────────────┐    mDNS (discover)     ┌──────────────────────┐
+│  Expo / RN App      │ ─────────────────────► │  Desktop Inspector   │
+│  (Mobile / Sim)     │ ◄───────────────────── │  (Electron)          │
+│                     │     WebSocket          │                      │
+│  + Network Agent    │     (ws://…:5051)      │  + WebSocket server  │
+│  + Console Agent    │                        │  + mDNS publisher    │
+└─────────────────────┘                        └──────────────────────┘
+```
 
 > 💡 **Desktop Inspector**: Download pre-built binaries for macOS, Windows, and Linux from [GitHub Releases](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
 
 ## 📦 Installation
 
-Install via npm:
+You can use the package in two modes:
+
+| Mode | What it does | Best for |
+|---|---|---|
+| **Auto-discovery (recommended)** | The agent finds the desktop debugger via mDNS — no IPs in code | Dev builds, EAS builds |
+| **Manual `wsUrl` (legacy)** | You pass the debugger's WebSocket URL explicitly | Expo Go, networks that block mDNS, quick tests |
+
+### Mode 1 — Auto-discovery (recommended)
+
+```bash
+# 1. Install the agent
+npm install rexpo-debugger
+
+# 2. Install the mDNS native module
+npx expo install react-native-zeroconf
+```
+
+Add the config plugin to your `app.json` (or `app.config.js`):
+
+```json
+{
+  "expo": {
+    "plugins": ["rexpo-debugger"]
+  }
+}
+```
+
+Initialize the agent **without** a `wsUrl` — discovery handles the rest:
+
+```typescript
+// app/_layout.tsx (or App.tsx)
+import { initNetworkAgent, initConsoleAgent } from "rexpo-debugger";
+
+if (__DEV__) {
+  initNetworkAgent({});
+  initConsoleAgent({ captureStackTrace: true });
+}
+```
+
+Then run a **new** dev build so the injected permissions are picked up:
+
+```bash
+npx expo prebuild       # regenerates ios/ and android/ with required permissions
+npx expo run:ios        # or run:android
+```
+
+That's it. Open the desktop debugger, open the app, the connection appears within seconds.
+
+### Mode 2 — Manual `wsUrl` (legacy / fallback)
+
+If you don't want a native rebuild or you're on a network that blocks mDNS, pass `wsUrl` like before:
 
 ```bash
 npm install rexpo-debugger
 ```
-
-or with yarn:
-
-```bash
-yarn add rexpo-debugger
-```
-
-## 🚀 Quick Start
-
-### 1. Install the Package
-
-```bash
-npm install rexpo-debugger
-```
-
-### 2. Initialize the Agent
-
-In your main file (e.g. `App.tsx` or `app/_layout.tsx`):
 
 ```typescript
 import { initNetworkAgent, initConsoleAgent } from "rexpo-debugger";
 
 if (__DEV__) {
-  // Network monitoring
   initNetworkAgent({
-    wsUrl: "ws://192.168.1.100:5051", // Your computer's local IP address
-    enabled: true,
+    wsUrl: "ws://192.168.1.100:5051", // your computer's local IP
   });
-
-  // Console monitoring (NEW!)
   initConsoleAgent({
-    wsUrl: "ws://192.168.1.100:5051", // Same WebSocket connection
-    enabled: true,
-    captureStackTrace: true, // Capture stack traces for errors/warnings
+    wsUrl: "ws://192.168.1.100:5051",
+    captureStackTrace: true,
   });
 }
 ```
 
-### 3. (Optional) Add Custom Axios Instances
+No config plugin, no native changes. Use [`ipconfig getifaddr en0`](#find-your-local-ip-address) (macOS) or `ipconfig` (Windows) to find the IP — the desktop app also shows it in the header bar with a copy button.
 
-If you use custom axios instances:
+### Custom axios instances
+
+If you use a custom axios instance (e.g. via `axios.create`), register it explicitly:
 
 ```typescript
-import {
-  initNetworkAgent,
-  initConsoleAgent,
-  addAxiosInstance,
-} from "rexpo-debugger";
-import { apiClient } from "./api/client"; // Your custom axios instance
+import { initNetworkAgent, addAxiosInstance } from "rexpo-debugger";
+import { apiClient } from "./api/client";
 
 if (__DEV__) {
-  // Network monitoring
-  initNetworkAgent({
-    wsUrl: "ws://192.168.1.100:5051",
-  });
-
-  // Add your custom axios instance
+  initNetworkAgent({});
   addAxiosInstance(apiClient);
-
-  // Console monitoring
-  initConsoleAgent({
-    wsUrl: "ws://192.168.1.100:5051",
-    enabled: true,
-  });
 }
 ```
 
-### 4. Find Your Local IP Address
+### Find your local IP address
 
-**macOS / Linux:**
+Only needed for Mode 2 (manual `wsUrl`). The desktop app shows all detected IPs in its header — just click the copy button. Or run:
+
+**macOS / Linux**
 
 ```bash
+ipconfig getifaddr en0
+# fallback
 ifconfig | grep "inet " | grep -v 127.0.0.1
 ```
 
-**Windows:**
+**Windows**
 
 ```bash
 ipconfig
 ```
 
-Look for an address like 192.168.x.x or 10.0.x.x in the output.
+Use the `192.168.x.x` or `10.0.x.x` address.
 
-### 5. Download and Start the Desktop Inspector
+### Download and start the desktop inspector
 
-Download the desktop application for your platform:
+Pre-built binaries are on [GitHub Releases](https://github.com/omeremreelmali/rexpo-debugger/releases/latest). After downloading, open the app — it starts a WebSocket server on port 5051 and publishes itself over mDNS automatically.
 
-- **macOS (Apple Silicon)**: [Rexpo Network Inspector-1.1.5-arm64.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5-arm64.dmg)
-- **macOS (Intel)**: [Rexpo Network Inspector-1.1.5.dmg](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5.dmg)
-- **Windows**: [Rexpo Network Inspector Setup 1.1.5.exe](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector.Setup.1.1.5.exe)
-- **Linux (x64)**: [Rexpo Network Inspector-1.1.5.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5.AppImage)
-- **Linux (ARM64)**: [Rexpo Network Inspector-1.1.5-arm64.AppImage](https://github.com/omeremreelmali/rexpo-debugger/releases/download/v1.1.5/Rexpo.Network.Inspector-1.1.5-arm64.AppImage)
+## ⚙️ Configuration Options
 
-> 📦 **All releases**: [View all releases on GitHub](https://github.com/omeremreelmali/rexpo-debugger/releases)
-
-After downloading, open the application. It will automatically start a WebSocket server at `ws://localhost:5051`.
-
-### 6. Run Your Expo Application
-
-```bash
-npx expo start
-```
-
-Open your app on a physical device or emulator. Network requests will automatically start appearing in the inspector! 🎉
-
-## Configuration Options
+### `initNetworkAgent(options)`
 
 ```typescript
 initNetworkAgent({
-  // WebSocket URL (required)
+  // WebSocket URL — optional. Omit to use mDNS auto-discovery.
   wsUrl: "ws://192.168.1.100:5051",
 
-  // Enable/disable the agent (optional, default: true)
+  // Enable/disable the agent (default: true)
   enabled: true,
 
-  // Maximum body snippet length (optional, default: 3000)
+  // Max body snippet length in characters (default: 3000)
   maxBodyLength: 3000,
 
-  // Enable detailed logging (optional, default: false)
-  // When false, only critical errors are logged
-  // When true, all network activity is logged
+  // Verbose logging (default: false)
   debug: false,
+
+  // mDNS discovery timeout in ms (default: 10000)
+  discoveryTimeoutMs: 10000,
 });
 ```
 
-### Debug Mode
-
-By default, the agent runs in **silent mode** and only logs critical errors. To see detailed logs of all network activity:
+### `initConsoleAgent(options)`
 
 ```typescript
-// Silent mode (default) - only critical errors
-initNetworkAgent({
-  wsUrl: "ws://192.168.1.100:5051",
-});
-
-// Debug mode - detailed logging
-initNetworkAgent({
-  wsUrl: "ws://192.168.1.100:5051",
-  debug: true,
+initConsoleAgent({
+  wsUrl: "ws://192.168.1.100:5051",   // optional, same as above
+  enabled: true,
+  debug: false,
+  captureStackTrace: true,             // capture stack for errors/warnings
+  discoveryTimeoutMs: 10000,
 });
 ```
 
-**Debug logs include:**
+### Debug mode
 
-- Connection status
-- Health checks (every 10 seconds)
-- Request/response capturing
-- Metadata tracking
-- Interceptor setup
+The agent runs silently by default and only logs critical failures. Set `debug: true` on either agent to see verbose output (discovery, connection, request/response capture, axios interceptor setup, periodic health checks).
 
-**Always logged (even in silent mode):**
+## 🔌 Expo Config Plugin
 
-- WebSocket connection errors
-- Request/response errors
-- Critical failures
+The plugin is bundled with the package. Listing `"rexpo-debugger"` in `expo.plugins` is enough — there is nothing else to import.
 
-## Troubleshooting
+### What it injects
 
-### "Connection refused" error
+**iOS (`Info.plist`)**
 
-- Make sure you entered your computer's IP address correctly
-- Make sure the inspector application is running
-- Make sure your device is on the same WiFi network
-- Check firewall settings
+| Key | Value |
+|---|---|
+| `NSLocalNetworkUsageDescription` | A string explaining local network use (override with the `iosLocalNetworkUsageDescription` plugin option) |
+| `NSBonjourServices` | `["_rexpo._tcp"]` |
 
-### Requests not showing up
+**Android (`AndroidManifest.xml`)**
 
-- Enable debug mode to see detailed logs: `debug: true`
-- Check for the "[NetworkAgent] Connected to inspector" message in the console (requires debug mode)
-- Make sure you are in `__DEV__` mode
-- Make sure the agent is initialized correctly
-- Verify the desktop inspector app is running
+- `android.permission.ACCESS_WIFI_STATE`
+- `android.permission.CHANGE_WIFI_MULTICAST_STATE`
+- `android.permission.INTERNET`
 
-### Body not showing up
+### Customizing the iOS usage description
 
-Some request/response bodies may be binary or stream-based. The agent only displays text-based bodies.
+```json
+{
+  "expo": {
+    "plugins": [
+      [
+        "rexpo-debugger",
+        {
+          "iosLocalNetworkUsageDescription": "Used by our internal debugger to discover this device on the dev network."
+        }
+      ]
+    ]
+  }
+}
+```
+
+### Production safety (3 guarantees)
+
+| Layer | Guarantee |
+|---|---|
+| **1. devDependency** | Keep the package under `devDependencies` — the JS code is never bundled into production |
+| **2. Plugin guard** | When `EAS_BUILD_PROFILE === "production"` (or `NODE_ENV === "production"` with no EAS profile), the plugin is a **no-op** — no permissions are injected into `Info.plist` or `AndroidManifest.xml` |
+| **3. `__DEV__` guard** | All agent code is wrapped in `if (__DEV__) { … }` — production runtime never starts the WebSocket or mDNS scan, so no system prompt appears to your users |
+
+You can audit guarantee #2 yourself:
+
+```bash
+EAS_BUILD_PROFILE=production npx expo prebuild --no-install --platform ios --clean
+# Then check that Info.plist has neither NSLocalNetworkUsageDescription nor NSBonjourServices
+```
+
+## 🛠 Troubleshooting
+
+### Auto-discovery never finds the debugger
+
+- **Desktop app running?** Check its terminal — you should see `[Inspector] mDNS service published: Rexpo Debugger on …`
+- **Same Wi-Fi?** Auto-discovery is local network only. Cellular / different Wi-Fi won't work.
+- **Corporate / guest Wi-Fi?** Many block mDNS multicast. Fall back to manual `wsUrl`.
+- **VPN active?** Forces traffic off the local interface. Disable it for the dev session or use manual `wsUrl`.
+- **iOS permission dialog never appeared?** The plugin didn't run. Verify `"rexpo-debugger"` is in `expo.plugins`, then `npx expo prebuild` and rebuild the dev client.
+- **Expo Go?** Auto-discovery does not work in Expo Go because Expo Go's own `Info.plist` doesn't declare `_rexpo._tcp`. Use a dev build or fall back to manual `wsUrl`.
+
+### `Module react-native-zeroconf not found`
+
+You're using auto-discovery without installing the native module:
+
+```bash
+npx expo install react-native-zeroconf
+npx expo prebuild
+npx expo run:ios   # or run:android
+```
+
+If you don't want a native rebuild, switch to manual `wsUrl` instead.
+
+### "Connection refused"
+
+- Confirm the desktop inspector is running
+- Confirm the device is on the same Wi-Fi
+- Check the macOS firewall (System Settings → Network → Firewall) and allow port 5051
+
+### Requests not appearing
+
+- Enable `debug: true` to see the connection / capture lifecycle
+- Confirm the app is running in `__DEV__` mode
+- Confirm `initNetworkAgent` is actually called (check the `if (__DEV__)` block)
+- For custom axios instances, confirm `addAxiosInstance(yourClient)` is called
+
+### Body not shown
+
+Binary or stream bodies cannot be displayed. The agent renders text-based bodies only.
