@@ -14,7 +14,6 @@ const NETWORK_POLL_INTERVAL_MS = 5000;
 let WS_PORT = DEFAULT_WS_PORT;
 let mainWindow: BrowserWindow | null = null;
 let wss: WebSocketServer | null = null;
-let connectedClientCount = 0;
 let isRestarting = false;
 
 let bonjour: Bonjour | null = null;
@@ -40,11 +39,17 @@ function getLocalIPv4Addresses(): NetworkInterfaceInfo[] {
   return result;
 }
 
+/**
+ * Connected-client count is derived live from `wss.clients` so it can't drift.
+ * This avoids a class of races when the server is recreated during a port
+ * restart: stale close events from the old server's clients can no longer
+ * decrement the counter for the new server.
+ */
 function getConnectionInfo(): ConnectionInfo {
   return {
     interfaces: getLocalIPv4Addresses(),
     port: WS_PORT,
-    connectedClients: connectedClientCount,
+    connectedClients: wss?.clients.size ?? 0,
   };
 }
 
@@ -175,8 +180,7 @@ function createWindow() {
  */
 function attachWebSocketListeners(server: WebSocketServer) {
   server.on("connection", (ws: WebSocket) => {
-    connectedClientCount += 1;
-    console.log(`[Inspector] Client connected (total: ${connectedClientCount})`);
+    console.log(`[Inspector] Client connected (total: ${server.clients.size})`);
     broadcastConnectionState();
 
     // Signal to the renderer that a fresh agent connection (i.e. app init or
@@ -200,9 +204,15 @@ function attachWebSocketListeners(server: WebSocketServer) {
     });
 
     ws.on("close", () => {
-      connectedClientCount = Math.max(0, connectedClientCount - 1);
-      console.log(`[Inspector] Client disconnected (total: ${connectedClientCount})`);
-      broadcastConnectionState();
+      // Defer one tick so `server.clients` has already removed this socket and
+      // the count we read is the post-removal value. Also: the count we read
+      // here is always for the SERVER this client was connected to, so a stale
+      // close event from an old (port-restart) server cannot affect the count
+      // shown to the renderer (which is computed from the live `wss`).
+      setImmediate(() => {
+        console.log(`[Inspector] Client disconnected (total: ${server.clients.size})`);
+        broadcastConnectionState();
+      });
     });
 
     ws.on("error", (error) => {
@@ -287,9 +297,6 @@ async function setNetworkPort(
     const oldServer = wss;
     wss = newServer;
     WS_PORT = newPort;
-    // The old server's open clients are about to be force-closed, so reset
-    // the counter — new connections will land on the new server.
-    connectedClientCount = 0;
 
     // 3. Gracefully close the old server. Existing clients get a close event.
     if (oldServer) {
