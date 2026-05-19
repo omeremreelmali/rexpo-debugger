@@ -18,6 +18,10 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.invoke("get-connection-info"),
   setMdnsEnabled: (enabled: boolean): Promise<{ mdnsRunning: boolean }> =>
     ipcRenderer.invoke("set-mdns-enabled", enabled),
+  setNetworkPort: (
+    port: number
+  ): Promise<{ ok: boolean; port: number; error?: string }> =>
+    ipcRenderer.invoke("set-network-port", port),
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => {
     ipcRenderer.on("connection-state-changed", (_event, info: ConnectionInfo) => {
       callback(info);
@@ -41,6 +45,9 @@ export interface ElectronAPI {
   sendCommand: (command: CommandMessage) => void;
   getConnectionInfo: () => Promise<ConnectionInfo>;
   setMdnsEnabled: (enabled: boolean) => Promise<{ mdnsRunning: boolean }>;
+  setNetworkPort: (
+    port: number
+  ) => Promise<{ ok: boolean; port: number; error?: string }>;
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
   removeConnectionStateListener: () => void;
   onSessionStarted: (callback: () => void) => void;

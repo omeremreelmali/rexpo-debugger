@@ -1,7 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSettings, ThemeMode } from "../state/SettingsContext";
 import { FilterLogLevel } from "../types";
 import "./SettingsModal.css";
+
+type PortApplyStatus =
+  | { kind: "idle" }
+  | { kind: "applying" }
+  | { kind: "success"; port: number }
+  | { kind: "error"; message: string };
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -31,6 +37,46 @@ function ComingSoonTag() {
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, updateSettings, resetSettings } = useSettings();
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Network port — kept locally until "Apply" so each keystroke doesn't trigger
+  // a server restart. Resets when the modal is reopened.
+  const [pendingPort, setPendingPort] = useState<number>(settings.connection.port);
+  const [portStatus, setPortStatus] = useState<PortApplyStatus>({ kind: "idle" });
+
+  // Keep pendingPort in sync when settings change from outside (e.g. Reset).
+  useEffect(() => {
+    setPendingPort(settings.connection.port);
+    setPortStatus({ kind: "idle" });
+  }, [settings.connection.port, isOpen]);
+
+  const applyPort = async () => {
+    if (pendingPort === settings.connection.port) return;
+    if (!window.electron?.setNetworkPort) {
+      setPortStatus({ kind: "error", message: "IPC köprüsü bulunamadı" });
+      return;
+    }
+    setPortStatus({ kind: "applying" });
+    try {
+      const result = await window.electron.setNetworkPort(pendingPort);
+      if (result.ok) {
+        updateSettings({ connection: { port: result.port } });
+        setPortStatus({ kind: "success", port: result.port });
+        // Reset the success indicator after a moment so it doesn't linger.
+        setTimeout(() => {
+          setPortStatus((s) => (s.kind === "success" ? { kind: "idle" } : s));
+        }, 2500);
+      } else {
+        // Server stayed on the old port; revert the input so the UI matches reality.
+        setPendingPort(result.port);
+        setPortStatus({ kind: "error", message: result.error || "Port değiştirilemedi" });
+      }
+    } catch (err) {
+      setPortStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Bilinmeyen hata",
+      });
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -189,24 +235,53 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Network port</span>
-                <ComingSoonTag />
                 <span className="settings-row-hint">
-                  Port değişikliği canlı uygulanmıyor — Electron'u yeniden başlat
+                  Değiştir + Apply'a bas → WS server yeni portta yeniden başlar
+                  ve mDNS otomatik re-publish olur. Bağlı agent'lar düşer, mDNS
+                  ile saniyeler içinde tekrar bulur.
                 </span>
+                {portStatus.kind === "applying" && (
+                  <span className="settings-row-status applying">⏳ Yeni portta başlatılıyor…</span>
+                )}
+                {portStatus.kind === "success" && (
+                  <span className="settings-row-status success">
+                    ✓ Port {portStatus.port} olarak güncellendi
+                  </span>
+                )}
+                {portStatus.kind === "error" && (
+                  <span className="settings-row-status error">
+                    ✗ {portStatus.message}
+                  </span>
+                )}
               </div>
-              <input
-                type="number"
-                min={1024}
-                max={65535}
-                value={settings.connection.port}
-                onChange={(e) =>
-                  updateSettings({
-                    connection: {
-                      port: Math.max(1024, Math.min(65535, Number(e.target.value) || 5051)),
-                    },
-                  })
-                }
-              />
+              <div className="settings-row-port-controls">
+                <input
+                  type="number"
+                  min={1024}
+                  max={65535}
+                  value={pendingPort}
+                  disabled={portStatus.kind === "applying"}
+                  onChange={(e) => {
+                    const next = Math.max(
+                      1024,
+                      Math.min(65535, Number(e.target.value) || 5051)
+                    );
+                    setPendingPort(next);
+                    if (portStatus.kind !== "idle") setPortStatus({ kind: "idle" });
+                  }}
+                />
+                <button
+                  type="button"
+                  className="settings-row-apply"
+                  onClick={applyPort}
+                  disabled={
+                    portStatus.kind === "applying" ||
+                    pendingPort === settings.connection.port
+                  }
+                >
+                  {portStatus.kind === "applying" ? "…" : "Apply"}
+                </button>
+              </div>
             </label>
 
             <label className="settings-row">

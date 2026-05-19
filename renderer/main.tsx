@@ -13,6 +13,9 @@ declare global {
       sendCommand: (command: any) => void;
       getConnectionInfo: () => Promise<ConnectionInfo>;
       setMdnsEnabled: (enabled: boolean) => Promise<{ mdnsRunning: boolean }>;
+      setNetworkPort: (
+        port: number
+      ) => Promise<{ ok: boolean; port: number; error?: string }>;
       onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
       removeConnectionStateListener: () => void;
       onSessionStarted: (callback: () => void) => void;

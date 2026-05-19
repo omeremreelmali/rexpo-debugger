@@ -5,14 +5,16 @@ import { WebSocketServer, WebSocket } from "ws";
 import { Bonjour, Service } from "bonjour-service";
 import { NetworkMessage, CommandMessage, ConnectionInfo, NetworkInterfaceInfo } from "./types";
 
-const WS_PORT = 5051;
+const DEFAULT_WS_PORT = 5051;
 const MDNS_SERVICE_TYPE = "rexpo";
 const MDNS_SERVICE_NAME = `Rexpo Debugger on ${os.hostname()}`;
 const NETWORK_POLL_INTERVAL_MS = 5000;
 
+let WS_PORT = DEFAULT_WS_PORT;
 let mainWindow: BrowserWindow | null = null;
 let wss: WebSocketServer | null = null;
 let connectedClientCount = 0;
+let isRestarting = false;
 
 let bonjour: Bonjour | null = null;
 let publishedService: Service | null = null;
@@ -165,44 +167,13 @@ function createWindow() {
   });
 }
 
-function startWebSocketServer() {
-  wss = new WebSocketServer({ port: WS_PORT });
-
-  ipcMain.on("send-command", (_event, command: CommandMessage) => {
-    if (wss) {
-      wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(command));
-        }
-      });
-    }
-  });
-
-  ipcMain.handle("get-connection-info", () => getConnectionInfo());
-
-  ipcMain.handle("set-mdns-enabled", (_event, enabled: boolean) => {
-    if (enabled) {
-      // Re-publish only if not already publishing
-      if (!publishedService) {
-        startMdns();
-      }
-    } else {
-      stopMdns();
-    }
-    return { mdnsRunning: publishedService !== null };
-  });
-
-  const ips = getLocalIPv4Addresses();
-  if (ips.length > 0) {
-    console.log(`[Inspector] WebSocket server started on port ${WS_PORT}`);
-    for (const iface of ips) {
-      console.log(`[Inspector]   ws://${iface.address}:${WS_PORT}  (${iface.name})`);
-    }
-  } else {
-    console.log(`[Inspector] WebSocket server started on ws://localhost:${WS_PORT} (no external IPv4 found)`);
-  }
-
-  wss.on("connection", (ws: WebSocket) => {
+/**
+ * Attaches all WS event handlers to a WebSocketServer instance.
+ * Called both for the initial server and any new server created during a
+ * port-restart.
+ */
+function attachWebSocketListeners(server: WebSocketServer) {
+  server.on("connection", (ws: WebSocket) => {
     connectedClientCount += 1;
     console.log(`[Inspector] Client connected (total: ${connectedClientCount})`);
     broadcastConnectionState();
@@ -238,14 +209,152 @@ function startWebSocketServer() {
     });
   });
 
-  wss.on("error", (error) => {
+  server.on("error", (error) => {
     console.error("[Inspector] WebSocket server error:", error);
   });
 }
 
-app.whenReady().then(() => {
+/**
+ * Binds a fresh WebSocketServer on the given port and resolves once it is
+ * listening, or rejects with the bind error (e.g. EADDRINUSE).
+ */
+function bindWebSocketServer(port: number): Promise<WebSocketServer> {
+  return new Promise((resolve, reject) => {
+    const server = new WebSocketServer({ port });
+    const onListening = () => {
+      server.off("error", onError);
+      resolve(server);
+    };
+    const onError = (err: Error) => {
+      server.off("listening", onListening);
+      reject(err);
+    };
+    server.once("listening", onListening);
+    server.once("error", onError);
+  });
+}
+
+async function startInitialWebSocketServer() {
+  try {
+    wss = await bindWebSocketServer(WS_PORT);
+    attachWebSocketListeners(wss);
+
+    const ips = getLocalIPv4Addresses();
+    if (ips.length > 0) {
+      console.log(`[Inspector] WebSocket server started on port ${WS_PORT}`);
+      for (const iface of ips) {
+        console.log(`[Inspector]   ws://${iface.address}:${WS_PORT}  (${iface.name})`);
+      }
+    } else {
+      console.log(
+        `[Inspector] WebSocket server started on ws://localhost:${WS_PORT} (no external IPv4 found)`
+      );
+    }
+  } catch (err) {
+    console.error(`[Inspector] Failed to bind initial WebSocket server on ${WS_PORT}:`, err);
+  }
+}
+
+/**
+ * Switches the WebSocket server to a new port without restarting the app.
+ *
+ * Safety: tries to bind the new port FIRST. Only if that succeeds do we tear
+ * down the old server. If the new port is already in use, the existing server
+ * keeps running on the old port and an error is returned to the renderer.
+ */
+async function setNetworkPort(
+  newPort: number
+): Promise<{ ok: boolean; port: number; error?: string }> {
+  if (isRestarting) {
+    return { ok: false, port: WS_PORT, error: "Bir restart hâlâ devam ediyor" };
+  }
+  if (!Number.isInteger(newPort) || newPort < 1024 || newPort > 65535) {
+    return { ok: false, port: WS_PORT, error: "Port aralığı 1024–65535 olmalı" };
+  }
+  if (newPort === WS_PORT) {
+    return { ok: true, port: WS_PORT };
+  }
+
+  isRestarting = true;
+  try {
+    // 1. Try to bind the new port. If this fails, the old server is untouched.
+    const newServer = await bindWebSocketServer(newPort);
+    attachWebSocketListeners(newServer);
+
+    // 2. Swap references and update the port BEFORE closing the old server so
+    //    any IPC calls that read WS_PORT/wss in the meantime see consistent state.
+    const oldServer = wss;
+    wss = newServer;
+    WS_PORT = newPort;
+    // The old server's open clients are about to be force-closed, so reset
+    // the counter — new connections will land on the new server.
+    connectedClientCount = 0;
+
+    // 3. Gracefully close the old server. Existing clients get a close event.
+    if (oldServer) {
+      try {
+        oldServer.close();
+      } catch (err) {
+        console.error("[Inspector] Error closing old WS server:", err);
+      }
+    }
+
+    // 4. Re-publish mDNS on the new port if it was running.
+    if (bonjour) {
+      publishMdnsService();
+    }
+
+    console.log(`[Inspector] WebSocket server moved to port ${WS_PORT}`);
+    broadcastConnectionState();
+    return { ok: true, port: WS_PORT };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[Inspector] Failed to bind port ${newPort}:`, message);
+    return { ok: false, port: WS_PORT, error: message };
+  } finally {
+    isRestarting = false;
+  }
+}
+
+/**
+ * Registers all IPC handlers. Called once on app startup — must not be called
+ * during a port restart, otherwise handlers would be double-registered and
+ * each one would fire twice.
+ */
+function registerIpcHandlers() {
+  ipcMain.on("send-command", (_event, command: CommandMessage) => {
+    if (wss) {
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(command));
+        }
+      });
+    }
+  });
+
+  ipcMain.handle("get-connection-info", () => getConnectionInfo());
+
+  ipcMain.handle("set-mdns-enabled", (_event, enabled: boolean) => {
+    if (enabled) {
+      // Re-publish only if not already publishing
+      if (!publishedService) {
+        startMdns();
+      }
+    } else {
+      stopMdns();
+    }
+    return { mdnsRunning: publishedService !== null };
+  });
+
+  ipcMain.handle("set-network-port", async (_event, port: number) => {
+    return await setNetworkPort(port);
+  });
+}
+
+app.whenReady().then(async () => {
   createWindow();
-  startWebSocketServer();
+  registerIpcHandlers();
+  await startInitialWebSocketServer();
   startMdns();
 
   app.on("activate", () => {
@@ -267,4 +376,3 @@ app.on("will-quit", () => {
     wss.close();
   }
 });
-

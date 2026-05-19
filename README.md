@@ -569,7 +569,7 @@ If you don't want a native rebuild, switch to manual `wsUrl` instead.
 - [x] ✅ Max history limits (FIFO trim)
 - [x] ✅ Default log level
 - [ ] Full light/dark theme (CSS variable refactor)
-- [ ] Network port live-restart from Settings
+- [x] ✅ Network port live-restart from Settings (bind-first safety, mDNS re-publish)
 
 ### Console
 

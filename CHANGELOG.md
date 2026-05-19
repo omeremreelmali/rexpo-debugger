@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Added — Network port live-restart (RED-160 follow-up)
+
+- 🔁 Changing the port in Settings + clicking **Apply** now actually switches the WS server to the new port — no Electron restart needed.
+- 🛡 Safety: the new port is bound **first**. If it's already in use, the old server keeps running and the error surfaces inline in the modal ("Apply" shows `✗ EADDRINUSE: ...`). Old port is never lost on failure.
+- 🛰 mDNS publisher is automatically unpublished + re-published on the new port so agents discover the move within seconds.
+- ⏳ Visual feedback during the switch: `Yeni portta başlatılıyor…` → `✓ Port 5052 olarak güncellendi`.
+- ↩ A new `set-network-port` IPC handler implements the swap with a single in-flight guard so concurrent attempts can't race.
+
 ### ✨ Added — Network context menu (RED-159)
 
 - 🖱 **Right-click on any network row** opens a context menu with: Copy URL, Copy as cURL, Copy as JSON, Replay, Edit & Replay, Delete request, Clear all requests.
