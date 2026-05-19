@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Added — Agent auto-reconnect
+
+The agent now reconnects to the desktop debugger on its own — no app reload
+required. Triggered by:
+
+- 🔁 **Network port live-restart** (Settings → Apply) — agent picks up the new port within a few seconds via mDNS re-discovery.
+- 🔌 **Desktop closed and reopened** — agent keeps retrying until the inspector comes back.
+- 🛰 **Wi-Fi blip / VPN toggle** — once the connection re-establishes, the agent retries discovery and reconnects.
+
+How it works:
+
+- The agent remembers its initial connection strategy (manual `wsUrl` or auto-discovery) and reuses it for every retry.
+- Retries use **exponential backoff** starting at 1s, doubling each attempt, capped at 10s. The counter resets to 0 on a successful connect.
+- In auto-discovery mode, each retry calls `resetDiscoveryCache()` + `discoverDebugger()` again so the agent picks up a re-published mDNS service (e.g. desktop moved to a new port).
+- Applies to both Network and Console agents independently.
+
+Heads-up: when the agent reconnects, the desktop counts it as a new session and fires `session-started`. If you have `autoClearOnInit` enabled (default), your captured history will clear on reconnect — toggle it off in Settings if that's not what you want.
+
 ### ✨ Added — Context menu & Edit Replay polish
 
 **Context menu (RED-159 leftovers):**

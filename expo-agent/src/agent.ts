@@ -59,7 +59,7 @@ export type InitOptions = {
   discoveryTimeoutMs?: number;
 };
 
-import { discoverDebugger } from "./discovery";
+import { discoverDebugger, resetDiscoveryCache } from "./discovery";
 
 let initialized = false;
 let socket: WebSocket | null = null;
@@ -67,6 +67,90 @@ let healthCheckInterval: any = null;
 let maxBodyLength = Infinity;
 let debugMode = false;
 let interceptedFetch: typeof fetch;
+
+// ─── Reconnect state ──────────────────────────────────────────────────────
+type ReconnectStrategy =
+  | { mode: "manual"; wsUrl: string }
+  | { mode: "auto"; discoveryTimeoutMs?: number };
+
+let reconnectStrategy: ReconnectStrategy | null = null;
+let reconnectAttempt = 0;
+let reconnectTimer: any = null;
+let stopped = false;
+
+const RECONNECT_BASE_DELAY_MS = 1000;
+const RECONNECT_MAX_DELAY_MS = 10_000;
+
+function computeReconnectDelay(attempt: number): number {
+  // 1s, 2s, 4s, 8s, capped at 10s
+  return Math.min(RECONNECT_BASE_DELAY_MS * 2 ** attempt, RECONNECT_MAX_DELAY_MS);
+}
+
+function clearReconnectTimer() {
+  if (reconnectTimer !== null) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+}
+
+function scheduleReconnect() {
+  if (stopped || !reconnectStrategy) return;
+  if (reconnectTimer !== null) return; // already scheduled
+
+  const delay = computeReconnectDelay(reconnectAttempt);
+  reconnectAttempt += 1;
+
+  debugLog(
+    `[NetworkAgent] 🔁 Will retry connection in ${delay}ms (attempt #${reconnectAttempt})`
+  );
+
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (stopped || !reconnectStrategy) return;
+    establishConnection(reconnectStrategy).catch((err) => {
+      errorLog("[NetworkAgent] ❌ Reconnect attempt failed:", err?.message || err);
+      // The connection failure will itself trigger another scheduleReconnect
+      // via onclose / discovery rejection — no need to chain here.
+    });
+  }, delay);
+}
+
+/**
+ * Establishes a fresh WebSocket connection according to the chosen strategy.
+ * - Manual: connects directly to the stored wsUrl.
+ * - Auto:   resets the discovery cache (so a re-published mDNS service with a
+ *           new port is picked up) and runs discoverDebugger() again, then
+ *           connects to the resolved URL.
+ *
+ * Used by both the initial init flow and the reconnect timer.
+ */
+async function establishConnection(strategy: ReconnectStrategy): Promise<void> {
+  if (strategy.mode === "manual") {
+    connectSocket(strategy.wsUrl);
+    return;
+  }
+
+  debugLog("[NetworkAgent] 🔎 Re-discovering debugger via mDNS");
+  resetDiscoveryCache();
+  try {
+    const service = await discoverDebugger({
+      timeoutMs: strategy.discoveryTimeoutMs,
+      debug: debugMode,
+    });
+    debugLog(
+      `[NetworkAgent] 🎯 Discovered debugger: ${service.name} @ ${service.url}`
+    );
+    connectSocket(service.url);
+  } catch (err) {
+    errorLog(
+      "[NetworkAgent] ❌ Auto-discovery failed:",
+      (err as Error)?.message || err
+    );
+    // Trigger another retry cycle so the agent doesn't give up after one
+    // unsuccessful discovery attempt (e.g. desktop launched a moment later).
+    scheduleReconnect();
+  }
+}
 
 // Metadata storage - use config object as key
 const requestMetadataMap = new WeakMap<
@@ -102,6 +186,11 @@ function connectSocket(wsUrl: string) {
     socket.onopen = () => {
       debugLog("[NetworkAgent] ✅ Connected to inspector:", wsUrl);
       debugLog("[NetworkAgent] 🟢 Socket state: OPEN (readyState: 1)");
+
+      // Successful connect — reset the backoff so the next disconnect starts
+      // its retry cycle from 1s again instead of resuming a long delay.
+      reconnectAttempt = 0;
+      clearReconnectTimer();
 
       if (healthCheckInterval) clearInterval(healthCheckInterval);
       if (debugMode) {
@@ -159,9 +248,16 @@ function connectSocket(wsUrl: string) {
       }
 
       socket = null;
+
+      // Schedule an automatic reconnect — handles desktop restart, Wi-Fi
+      // hiccup, port live-restart, VPN toggle, etc. without requiring an
+      // app reload. The reconnect uses the same strategy (manual wsUrl or
+      // mDNS re-discovery) that the initial init used.
+      scheduleReconnect();
     };
   } catch (error) {
     errorLog("[NetworkAgent] ❌ Failed to create WebSocket:", error);
+    scheduleReconnect();
   }
 }
 
@@ -189,24 +285,22 @@ export function initNetworkAgent(options: InitOptions = {}) {
   }
 
   initialized = true;
+  stopped = false;
 
-  // Resolve the WS URL — either user-provided or via mDNS auto-discovery.
-  // We set up interceptors first (below) so requests made during discovery are
-  // queued via safeSend's null-socket guard rather than lost.
+  // Remember how we connected so the reconnect timer can repeat the same path.
+  reconnectStrategy = wsUrl
+    ? { mode: "manual", wsUrl }
+    : { mode: "auto", discoveryTimeoutMs };
+  reconnectAttempt = 0;
+
+  // Kick off the initial connection. The reconnect machinery takes over from
+  // here whenever the socket drops.
   if (wsUrl) {
+    debugLog("[NetworkAgent] 🔄 Initial connect to:", wsUrl);
     connectSocket(wsUrl);
   } else {
     debugLog("[NetworkAgent] 🔎 No wsUrl provided — auto-discovering debugger via mDNS");
-    discoverDebugger({ timeoutMs: discoveryTimeoutMs, debug: debugMode })
-      .then((service) => {
-        debugLog(
-          `[NetworkAgent] 🎯 Discovered debugger: ${service.name} @ ${service.url}`
-        );
-        connectSocket(service.url);
-      })
-      .catch((err) => {
-        errorLog("[NetworkAgent] ❌ Auto-discovery failed:", err?.message || err);
-      });
+    establishConnection(reconnectStrategy);
   }
 
   // Override global.fetch

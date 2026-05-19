@@ -28,7 +28,7 @@ export type ConsoleMessage = {
   stack?: string;
 };
 
-import { discoverDebugger } from "./discovery";
+import { discoverDebugger, resetDiscoveryCache } from "./discovery";
 
 export type ConsoleAgentOptions = {
   /**
@@ -50,6 +50,68 @@ let initialized = false;
 let socket: WebSocket | null = null;
 let debugMode = false;
 let captureStackTrace = true;
+
+// ─── Reconnect state ──────────────────────────────────────────────────────
+type ReconnectStrategy =
+  | { mode: "manual"; wsUrl: string }
+  | { mode: "auto"; discoveryTimeoutMs?: number };
+
+let reconnectStrategy: ReconnectStrategy | null = null;
+let reconnectAttempt = 0;
+let reconnectTimer: any = null;
+let stopped = false;
+
+const RECONNECT_BASE_DELAY_MS = 1000;
+const RECONNECT_MAX_DELAY_MS = 10_000;
+
+function computeReconnectDelay(attempt: number): number {
+  return Math.min(RECONNECT_BASE_DELAY_MS * 2 ** attempt, RECONNECT_MAX_DELAY_MS);
+}
+
+function clearReconnectTimer() {
+  if (reconnectTimer !== null) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+}
+
+function scheduleReconnect() {
+  if (stopped || !reconnectStrategy) return;
+  if (reconnectTimer !== null) return;
+
+  const delay = computeReconnectDelay(reconnectAttempt);
+  reconnectAttempt += 1;
+  debugLog(`🔁 Will retry connection in ${delay}ms (attempt #${reconnectAttempt})`);
+
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (stopped || !reconnectStrategy) return;
+    establishConnection(reconnectStrategy).catch((err) => {
+      errorLog("❌ Reconnect attempt failed:", err?.message || err);
+    });
+  }, delay);
+}
+
+async function establishConnection(strategy: ReconnectStrategy): Promise<void> {
+  if (strategy.mode === "manual") {
+    connectSocket(strategy.wsUrl);
+    return;
+  }
+
+  debugLog("🔎 Re-discovering debugger via mDNS");
+  resetDiscoveryCache();
+  try {
+    const service = await discoverDebugger({
+      timeoutMs: strategy.discoveryTimeoutMs,
+      debug: debugMode,
+    });
+    debugLog(`🎯 Discovered debugger: ${service.name} @ ${service.url}`);
+    connectSocket(service.url);
+  } catch (err) {
+    errorLog("❌ Auto-discovery failed:", (err as Error)?.message || err);
+    scheduleReconnect();
+  }
+}
 
 // Original console methods
 const originalConsole = {
@@ -86,6 +148,9 @@ function connectSocket(wsUrl: string) {
 
     socket.onopen = () => {
       debugLog("✅ Connected to inspector:", wsUrl);
+      // Successful connect — reset backoff for the next disconnect.
+      reconnectAttempt = 0;
+      clearReconnectTimer();
     };
 
     socket.onerror = (e) => {
@@ -95,9 +160,12 @@ function connectSocket(wsUrl: string) {
     socket.onclose = (_e) => {
       debugLog("🔌 Disconnected from inspector");
       socket = null;
+      // Auto-reconnect — same strategy as initial connect.
+      scheduleReconnect();
     };
   } catch (error) {
     errorLog("❌ Failed to create WebSocket:", error);
+    scheduleReconnect();
   }
 }
 
@@ -128,19 +196,19 @@ export function initConsoleAgent(options: ConsoleAgentOptions = {}) {
   }
 
   initialized = true;
+  stopped = false;
+
+  // Remember how we connected so the reconnect timer can repeat the same path.
+  reconnectStrategy = wsUrl
+    ? { mode: "manual", wsUrl }
+    : { mode: "auto", discoveryTimeoutMs };
+  reconnectAttempt = 0;
 
   if (wsUrl) {
     connectSocket(wsUrl);
   } else {
     debugLog("🔎 No wsUrl provided — auto-discovering debugger via mDNS");
-    discoverDebugger({ timeoutMs: discoveryTimeoutMs, debug: debugMode })
-      .then((service) => {
-        debugLog(`🎯 Discovered debugger: ${service.name} @ ${service.url}`);
-        connectSocket(service.url);
-      })
-      .catch((err) => {
-        errorLog("❌ Auto-discovery failed:", err?.message || err);
-      });
+    establishConnection(reconnectStrategy);
   }
 
   // Override console methods
