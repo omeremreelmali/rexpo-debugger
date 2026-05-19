@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { NetworkProvider, useNetwork } from "./state/NetworkContext";
 import { SettingsProvider, useSettings } from "./state/SettingsContext";
+import { ToastProvider } from "./components/Toast";
 import { FilterBar } from "./components/FilterBar";
 import { NetworkTable } from "./components/NetworkTable";
 import { RequestDetails } from "./components/RequestDetails";
@@ -207,9 +208,11 @@ function AppContent() {
 export function App() {
   return (
     <SettingsProvider>
-      <NetworkProvider>
-        <AppContent />
-      </NetworkProvider>
+      <ToastProvider>
+        <NetworkProvider>
+          <AppContent />
+        </NetworkProvider>
+      </ToastProvider>
     </SettingsProvider>
   );
 }

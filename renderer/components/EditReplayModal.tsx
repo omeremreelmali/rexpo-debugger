@@ -8,7 +8,7 @@ interface EditReplayModalProps {
   onClose: () => void;
 }
 
-interface HeaderRow {
+interface KeyValueRow {
   id: string;
   key: string;
   value: string;
@@ -24,19 +24,19 @@ const SENSITIVE_HEADER_NAMES = [
 ];
 
 let rowCounter = 0;
-const nextRowId = () => `h-${++rowCounter}`;
+const nextRowId = (prefix = "h") => `${prefix}-${++rowCounter}`;
 
-function headersToRows(headers?: Record<string, string>): HeaderRow[] {
+function headersToRows(headers?: Record<string, string>): KeyValueRow[] {
   if (!headers) return [];
   return Object.entries(headers).map(([key, value]) => ({
-    id: nextRowId(),
+    id: nextRowId("h"),
     key,
     value,
     enabled: true,
   }));
 }
 
-function rowsToHeaders(rows: HeaderRow[]): Record<string, string> {
+function rowsToHeaders(rows: KeyValueRow[]): Record<string, string> {
   const result: Record<string, string> = {};
   for (const row of rows) {
     if (!row.enabled) continue;
@@ -45,6 +45,55 @@ function rowsToHeaders(rows: HeaderRow[]): Record<string, string> {
     result[key] = row.value;
   }
   return result;
+}
+
+/**
+ * Splits a URL into a base part (scheme + host + path) and an array of query
+ * parameters. The fragment (#…) is preserved as part of the base.
+ *
+ * Falls back to "everything before the first ?" when URL parsing fails (e.g.
+ * relative URLs captured from in-app routing).
+ */
+function parseUrl(input: string): {
+  base: string;
+  params: KeyValueRow[];
+} {
+  if (!input) return { base: "", params: [] };
+  try {
+    const u = new URL(input);
+    const params: KeyValueRow[] = [];
+    u.searchParams.forEach((value, key) => {
+      params.push({ id: nextRowId("q"), key, value, enabled: true });
+    });
+    const base = `${u.origin}${u.pathname}${u.hash}`;
+    return { base, params };
+  } catch {
+    // relative URL or unparseable — split naively on first ?
+    const qIdx = input.indexOf("?");
+    if (qIdx < 0) return { base: input, params: [] };
+    const base = input.slice(0, qIdx);
+    const search = new URLSearchParams(input.slice(qIdx + 1));
+    const params: KeyValueRow[] = [];
+    search.forEach((value, key) => {
+      params.push({ id: nextRowId("q"), key, value, enabled: true });
+    });
+    return { base, params };
+  }
+}
+
+function buildUrl(base: string, params: KeyValueRow[]): string {
+  const active = params.filter((p) => p.enabled && p.key.trim().length > 0);
+  if (active.length === 0) return base;
+  const search = new URLSearchParams();
+  for (const p of active) {
+    search.append(p.key.trim(), p.value);
+  }
+  // Preserve fragment if base already has one (URLSearchParams string doesn't include ?)
+  const hashIdx = base.indexOf("#");
+  if (hashIdx >= 0) {
+    return `${base.slice(0, hashIdx)}?${search.toString()}${base.slice(hashIdx)}`;
+  }
+  return `${base}?${search.toString()}`;
 }
 
 function isSensitive(headerName: string): boolean {
@@ -61,13 +110,31 @@ function tryPrettyJson(input: string): string {
 }
 
 export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
+  const initialParsed = useMemo(() => parseUrl(request.url), [request.url]);
   const [method, setMethod] = useState(request.method.toUpperCase());
-  const [url, setUrl] = useState(request.url);
-  const [headers, setHeaders] = useState<HeaderRow[]>(() =>
+  const [baseUrl, setBaseUrl] = useState(initialParsed.base);
+  const [queryParams, setQueryParams] = useState<KeyValueRow[]>(initialParsed.params);
+  const [headers, setHeaders] = useState<KeyValueRow[]>(() =>
     headersToRows(request.requestHeaders)
   );
   const [body, setBody] = useState<string>(() => tryPrettyJson(request.requestBodySnippet || ""));
   const [revealedHeaderIds, setRevealedHeaderIds] = useState<Set<string>>(new Set());
+
+  // Live preview of the resolved URL — what we'll actually send.
+  const resolvedUrl = useMemo(
+    () => buildUrl(baseUrl.trim(), queryParams),
+    [baseUrl, queryParams]
+  );
+
+  // If the user pastes a full URL (with ?key=value) into the base field, peel
+  // the query string off into the table on blur.
+  const onBaseUrlBlur = () => {
+    if (baseUrl.includes("?")) {
+      const reparsed = parseUrl(baseUrl);
+      setBaseUrl(reparsed.base);
+      setQueryParams((prev) => [...prev, ...reparsed.params]);
+    }
+  };
 
   // Detect JSON body validity for live feedback
   const bodyValidation = useMemo(() => {
@@ -95,10 +162,13 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
   }, [onClose]);
 
   const addHeader = () => {
-    setHeaders((prev) => [...prev, { id: nextRowId(), key: "", value: "", enabled: true }]);
+    setHeaders((prev) => [
+      ...prev,
+      { id: nextRowId("h"), key: "", value: "", enabled: true },
+    ]);
   };
 
-  const updateHeader = (id: string, patch: Partial<HeaderRow>) => {
+  const updateHeader = (id: string, patch: Partial<KeyValueRow>) => {
     setHeaders((prev) =>
       prev.map((h) => (h.id === id ? { ...h, ...patch } : h))
     );
@@ -106,6 +176,23 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
 
   const removeHeader = (id: string) => {
     setHeaders((prev) => prev.filter((h) => h.id !== id));
+  };
+
+  const addQueryParam = () => {
+    setQueryParams((prev) => [
+      ...prev,
+      { id: nextRowId("q"), key: "", value: "", enabled: true },
+    ]);
+  };
+
+  const updateQueryParam = (id: string, patch: Partial<KeyValueRow>) => {
+    setQueryParams((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...patch } : p))
+    );
+  };
+
+  const removeQueryParam = (id: string) => {
+    setQueryParams((prev) => prev.filter((p) => p.id !== id));
   };
 
   const toggleReveal = (id: string) => {
@@ -121,7 +208,7 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
 
   const handleSend = () => {
     sendReplayCommand({
-      url: url.trim(),
+      url: resolvedUrl,
       method,
       headers: rowsToHeaders(headers),
       body: hasBody ? body : undefined,
@@ -129,7 +216,9 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
     onClose();
   };
 
-  const canSend = url.trim().length > 0 && (!hasBody || !body.trim() || bodyValidation.isJson || !looksLikeJson(body));
+  const canSend =
+    baseUrl.trim().length > 0 &&
+    (!hasBody || !body.trim() || bodyValidation.isJson || !looksLikeJson(body));
 
   return (
     <div
@@ -170,12 +259,81 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
             <input
               className="edit-replay-url"
               type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://api.example.com/endpoint?query=value"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              onBlur={onBaseUrlBlur}
+              placeholder="https://api.example.com/endpoint"
               spellCheck={false}
             />
           </div>
+
+          {/* Resolved URL preview */}
+          {queryParams.some((p) => p.enabled && p.key.trim()) && (
+            <p className="edit-replay-resolved-url">
+              <span className="edit-replay-resolved-label">Final URL:</span>{" "}
+              <span className="edit-replay-resolved-value">{resolvedUrl}</span>
+            </p>
+          )}
+
+          {/* Query params */}
+          <section className="edit-replay-section">
+            <header className="edit-replay-section-header">
+              <h3>Query params</h3>
+              <button
+                type="button"
+                className="edit-replay-section-add"
+                onClick={addQueryParam}
+              >
+                + Add param
+              </button>
+            </header>
+
+            {queryParams.length === 0 ? (
+              <p className="edit-replay-empty">
+                No query params — click "Add param" to add one.
+              </p>
+            ) : (
+              <div className="edit-replay-headers">
+                {queryParams.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`edit-replay-header-row ${!p.enabled ? "disabled" : ""}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={p.enabled}
+                      onChange={(e) => updateQueryParam(p.id, { enabled: e.target.checked })}
+                      title={p.enabled ? "Disable" : "Enable"}
+                    />
+                    <input
+                      className="edit-replay-header-key"
+                      type="text"
+                      value={p.key}
+                      onChange={(e) => updateQueryParam(p.id, { key: e.target.value })}
+                      placeholder="param"
+                      spellCheck={false}
+                    />
+                    <input
+                      className="edit-replay-header-value"
+                      type="text"
+                      value={p.value}
+                      onChange={(e) => updateQueryParam(p.id, { value: e.target.value })}
+                      placeholder="value"
+                      spellCheck={false}
+                    />
+                    <button
+                      type="button"
+                      className="edit-replay-header-remove"
+                      onClick={() => removeQueryParam(p.id)}
+                      title="Remove"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           {/* Headers */}
           <section className="edit-replay-section">

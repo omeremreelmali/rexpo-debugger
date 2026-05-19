@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import * as path from "path";
 import * as os from "os";
+import * as fs from "fs";
 import { WebSocketServer, WebSocket } from "ws";
 import { Bonjour, Service } from "bonjour-service";
 import { NetworkMessage, CommandMessage, ConnectionInfo, NetworkInterfaceInfo } from "./types";
@@ -349,6 +350,38 @@ function registerIpcHandlers() {
   ipcMain.handle("set-network-port", async (_event, port: number) => {
     return await setNetworkPort(port);
   });
+
+  ipcMain.handle(
+    "save-response-to-file",
+    async (
+      _event,
+      payload: { defaultName: string; content: string; filters?: { name: string; extensions: string[] }[] }
+    ): Promise<{ ok: boolean; cancelled?: boolean; filePath?: string; fileName?: string; error?: string }> => {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        return { ok: false, error: "No active window" };
+      }
+      try {
+        const result = await dialog.showSaveDialog(mainWindow, {
+          title: "Save response",
+          defaultPath: payload.defaultName,
+          filters: payload.filters && payload.filters.length > 0
+            ? payload.filters
+            : [{ name: "All files", extensions: ["*"] }],
+        });
+        if (result.canceled || !result.filePath) {
+          return { ok: false, cancelled: true };
+        }
+        await fs.promises.writeFile(result.filePath, payload.content, "utf-8");
+        return {
+          ok: true,
+          filePath: result.filePath,
+          fileName: path.basename(result.filePath),
+        };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
 }
 
 app.whenReady().then(async () => {

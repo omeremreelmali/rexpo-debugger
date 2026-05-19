@@ -4,8 +4,10 @@ import { useSettings } from "../state/SettingsContext";
 import { RequestState } from "../types";
 import { copyToClipboard, generateCurlCommand } from "../utils/curlGenerator";
 import { replayRequest } from "../utils/replayRequest";
+import { saveResponseToFile } from "../utils/saveResponse";
 import { ContextMenu, ContextMenuItem } from "./ContextMenu";
 import { EditReplayModal } from "./EditReplayModal";
+import { useToast } from "./Toast";
 import "./NetworkTable.css";
 
 interface ContextMenuState {
@@ -17,8 +19,14 @@ interface ContextMenuState {
 export function NetworkTable() {
   const { state, dispatch } = useNetwork();
   const { settings } = useSettings();
+  const toast = useToast();
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [editTarget, setEditTarget] = useState<RequestState | null>(null);
+
+  const copyWithToast = async (text: string, label: string) => {
+    const ok = await copyToClipboard(text);
+    toast.show(ok ? `${label} kopyalandı` : `Kopyalama başarısız`, ok ? "success" : "error");
+  };
 
   const filteredRequests = useMemo(() => {
     let filtered = state.requests;
@@ -86,55 +94,77 @@ export function NetworkTable() {
 
   const closeMenu = () => setMenu(null);
 
-  const buildMenuItems = (request: RequestState): ContextMenuItem[] => [
-    {
-      id: "copy-url",
-      icon: "🔗",
-      label: "Copy URL",
-      onClick: () => void copyToClipboard(request.url),
-    },
-    {
-      id: "copy-curl",
-      icon: "📋",
-      label: "Copy as cURL",
-      onClick: () => void copyToClipboard(generateCurlCommand(request)),
-    },
-    {
-      id: "copy-json",
-      icon: "🧾",
-      label: "Copy as JSON",
-      onClick: () =>
-        void copyToClipboard(JSON.stringify(request, null, 2)),
-    },
-    { id: "sep-1", label: "", separator: true },
-    {
-      id: "replay",
-      icon: "🔁",
-      label: "Replay",
-      onClick: () => replayRequest(request),
-    },
-    {
-      id: "edit-replay",
-      icon: "✏️",
-      label: "Edit & Replay…",
-      onClick: () => setEditTarget(request),
-    },
-    { id: "sep-2", label: "", separator: true },
-    {
-      id: "delete",
-      icon: "🗑",
-      label: "Delete request",
-      destructive: true,
-      onClick: () => dispatch({ type: "DELETE_REQUEST", payload: request.id }),
-    },
-    {
-      id: "clear-all",
-      icon: "🧹",
-      label: "Clear all requests",
-      destructive: true,
-      onClick: () => dispatch({ type: "CLEAR_NETWORK" }),
-    },
-  ];
+  const buildMenuItems = (request: RequestState): ContextMenuItem[] => {
+    const hasResponseBody = Boolean(request.responseBodySnippet);
+    return [
+      {
+        id: "copy-url",
+        icon: "🔗",
+        label: "Copy URL",
+        onClick: () => void copyWithToast(request.url, "URL"),
+      },
+      {
+        id: "copy-curl",
+        icon: "📋",
+        label: "Copy as cURL",
+        onClick: () =>
+          void copyWithToast(generateCurlCommand(request), "cURL komutu"),
+      },
+      {
+        id: "copy-json",
+        icon: "🧾",
+        label: "Copy as JSON",
+        onClick: () =>
+          void copyWithToast(JSON.stringify(request, null, 2), "Request JSON"),
+      },
+      {
+        id: "save-response",
+        icon: "💾",
+        label: "Save response…",
+        disabled: !hasResponseBody,
+        onClick: async () => {
+          const result = await saveResponseToFile(request);
+          if (result.cancelled) return;
+          if (result.ok) {
+            toast.show(`Response kaydedildi: ${result.fileName ?? ""}`, "success");
+          } else {
+            toast.show(result.error || "Kaydetme başarısız", "error");
+          }
+        },
+      },
+      { id: "sep-1", label: "", separator: true },
+      {
+        id: "replay",
+        icon: "🔁",
+        label: "Replay",
+        onClick: () => {
+          replayRequest(request);
+          toast.show("Replay gönderildi", "success");
+        },
+      },
+      {
+        id: "edit-replay",
+        icon: "✏️",
+        label: "Edit & Replay…",
+        onClick: () => setEditTarget(request),
+      },
+      { id: "sep-2", label: "", separator: true },
+      {
+        id: "delete",
+        icon: "🗑",
+        label: "Delete request",
+        destructive: true,
+        onClick: () => dispatch({ type: "DELETE_REQUEST", payload: request.id }),
+      },
+      {
+        id: "clear-all",
+        icon: "🧹",
+        label: "Clear all requests",
+        destructive: true,
+        onClick: () => dispatch({ type: "CLEAR_NETWORK" }),
+      },
+    ];
+  };
 
   return (
     <div className="network-table-container">

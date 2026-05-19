@@ -22,6 +22,17 @@ contextBridge.exposeInMainWorld("electron", {
     port: number
   ): Promise<{ ok: boolean; port: number; error?: string }> =>
     ipcRenderer.invoke("set-network-port", port),
+  saveResponseToFile: (payload: {
+    defaultName: string;
+    content: string;
+    filters?: { name: string; extensions: string[] }[];
+  }): Promise<{
+    ok: boolean;
+    cancelled?: boolean;
+    filePath?: string;
+    fileName?: string;
+    error?: string;
+  }> => ipcRenderer.invoke("save-response-to-file", payload),
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => {
     ipcRenderer.on("connection-state-changed", (_event, info: ConnectionInfo) => {
       callback(info);
@@ -48,6 +59,17 @@ export interface ElectronAPI {
   setNetworkPort: (
     port: number
   ) => Promise<{ ok: boolean; port: number; error?: string }>;
+  saveResponseToFile: (payload: {
+    defaultName: string;
+    content: string;
+    filters?: { name: string; extensions: string[] }[];
+  }) => Promise<{
+    ok: boolean;
+    cancelled?: boolean;
+    filePath?: string;
+    fileName?: string;
+    error?: string;
+  }>;
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
   removeConnectionStateListener: () => void;
   onSessionStarted: (callback: () => void) => void;

@@ -16,6 +16,17 @@ declare global {
       setNetworkPort: (
         port: number
       ) => Promise<{ ok: boolean; port: number; error?: string }>;
+      saveResponseToFile: (payload: {
+        defaultName: string;
+        content: string;
+        filters?: { name: string; extensions: string[] }[];
+      }) => Promise<{
+        ok: boolean;
+        cancelled?: boolean;
+        filePath?: string;
+        fileName?: string;
+        error?: string;
+      }>;
       onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
       removeConnectionStateListener: () => void;
       onSessionStarted: (callback: () => void) => void;

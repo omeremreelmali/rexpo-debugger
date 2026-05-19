@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Added — Context menu & Edit Replay polish
+
+**Context menu (RED-159 leftovers):**
+
+- 💬 **Toast feedback** after copy actions — "URL kopyalandı", "cURL komutu kopyalandı", "Request JSON kopyalandı". A reusable `<Toast>` system was added (`ToastProvider` + `useToast`) and wired into the network row context menu and replay actions.
+- 💾 **Save response to file** — new context menu item. Opens the native OS save dialog (via a new `save-response-to-file` IPC handler) and writes the response body to disk. The default filename and extension are derived from the URL path or, failing that, the response Content-Type (`json`, `xml`, `html`, `txt`, `png`, `jpg`, `svg`, …). JSON bodies are pretty-printed on save. The menu item is greyed-out when the request has no captured response body.
+- ✓ "Replay gönderildi" toast also fires after a plain Replay click for parity.
+
+**Edit & Replay (RED-162 leftovers):**
+
+- 🔧 **Query params editor** — new section in the modal, modelled after the headers table (add / remove / disable individually). On open, the URL's existing query string is parsed into rows; the URL field shows only the base. Pasting a URL with `?key=value` into the base field peels the query off into the table on blur.
+- 🪞 **Live "Final URL" preview** appears under the URL row when any query param is active, so you can see exactly what will be sent.
+- ✅ On Send, the URL is rebuilt via `URLSearchParams` so encoding is correct (no manual string concatenation).
+
 ### ✨ Added — Full light theme (RED-160 follow-up)
 
 - 🎨 Complete CSS-variable refactor: every component reads its colors from a
