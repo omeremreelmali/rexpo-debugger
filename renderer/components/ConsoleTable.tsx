@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
+import { useSettings } from "../state/SettingsContext";
 import "./ConsoleTable.css";
 
 export function ConsoleTable() {
   const { state, dispatch } = useNetwork();
+  const { settings } = useSettings();
 
   const filteredLogs = useMemo(() => {
     let logs = state.consoleLogs;
@@ -37,7 +39,12 @@ export function ConsoleTable() {
         <div className="console-header-cell timestamp">Time</div>
       </div>
       <div className="console-body">
-        {filteredLogs.length === 0 ? (
+        {!settings.agents.consoleEnabled ? (
+          <div className="console-empty">
+            <span>🚫 Console agent disabled</span>
+            <small>Settings → Agents → Console agent enabled</small>
+          </div>
+        ) : filteredLogs.length === 0 ? (
           <div className="console-empty">
             <span>No console logs yet</span>
             <small>Console logs will appear here as they are generated</small>

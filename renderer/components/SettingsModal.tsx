@@ -205,7 +205,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Auto-detect IP (mDNS)</span>
-                <PendingTag issue="RED-160 follow-up" />
+                <span className="settings-row-hint">
+                  Kapatınca desktop mDNS yayınını durdurur — agent manuel wsUrl kullanmak
+                  zorunda kalır
+                </span>
               </div>
               <input
                 type="checkbox"
@@ -220,7 +223,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Manuel host:port override</span>
                 <span className="settings-row-hint">
-                  Boş bırakırsan auto-detect kullanılır. Örn: 192.168.1.42:5051
+                  Boş bırakırsan auto-detect kullanılır. Header chip'i de bu değeri gösterir
+                  ve "M" rozeti ile manuel olduğunu işaretler.
                 </span>
               </div>
               <input

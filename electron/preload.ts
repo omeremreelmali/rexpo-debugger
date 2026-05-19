@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld("electron", {
   },
   getConnectionInfo: (): Promise<ConnectionInfo> =>
     ipcRenderer.invoke("get-connection-info"),
+  setMdnsEnabled: (enabled: boolean): Promise<{ mdnsRunning: boolean }> =>
+    ipcRenderer.invoke("set-mdns-enabled", enabled),
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => {
     ipcRenderer.on("connection-state-changed", (_event, info: ConnectionInfo) => {
       callback(info);
@@ -23,6 +25,12 @@ contextBridge.exposeInMainWorld("electron", {
   },
   removeConnectionStateListener: () => {
     ipcRenderer.removeAllListeners("connection-state-changed");
+  },
+  onSessionStarted: (callback: () => void) => {
+    ipcRenderer.on("session-started", () => callback());
+  },
+  removeSessionStartedListener: () => {
+    ipcRenderer.removeAllListeners("session-started");
   },
 });
 
@@ -32,8 +40,11 @@ export interface ElectronAPI {
   removeNetworkMessageListener: () => void;
   sendCommand: (command: CommandMessage) => void;
   getConnectionInfo: () => Promise<ConnectionInfo>;
+  setMdnsEnabled: (enabled: boolean) => Promise<{ mdnsRunning: boolean }>;
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
   removeConnectionStateListener: () => void;
+  onSessionStarted: (callback: () => void) => void;
+  removeSessionStartedListener: () => void;
 }
 
 declare global {

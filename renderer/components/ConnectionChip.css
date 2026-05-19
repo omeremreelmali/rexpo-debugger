@@ -61,6 +61,22 @@
   white-space: nowrap;
 }
 
+.connection-manual-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  background: rgba(215, 186, 125, 0.15);
+  color: #d7ba7d;
+  border: 1px solid rgba(215, 186, 125, 0.4);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-radius: 3px;
+}
+
 .connection-count {
   display: inline-flex;
   align-items: center;

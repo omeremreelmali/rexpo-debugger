@@ -33,6 +33,36 @@ function AppContent() {
   useEffect(() => {
     dispatch({ type: "SET_FILTER_LOG_LEVEL", payload: settings.console.defaultLogLevel });
   }, []);
+
+  // RED-157: auto-clear panels when a new agent connects (= app init/reload).
+  // We mirror settings into a ref so the listener always reads the live values
+  // without being re-bound when settings change.
+  const autoClearSettingsRef = useRef(settings);
+  useEffect(() => {
+    autoClearSettingsRef.current = settings;
+  }, [settings]);
+
+  useEffect(() => {
+    if (!window.electron?.onSessionStarted) return;
+    window.electron.onSessionStarted(() => {
+      const current = autoClearSettingsRef.current;
+      if (current.network.autoClearOnInit) {
+        dispatch({ type: "CLEAR_NETWORK" });
+      }
+      if (current.console.autoClearOnInit) {
+        dispatch({ type: "CLEAR_CONSOLE" });
+      }
+    });
+    return () => window.electron?.removeSessionStartedListener?.();
+  }, [dispatch]);
+
+  // RED-160 follow-up: sync the auto-detect (mDNS) toggle to the Electron side
+  // so disabling it actually stops the Bonjour publisher.
+  useEffect(() => {
+    window.electron?.setMdnsEnabled?.(settings.connection.autoDetectIp).catch(() => {
+      // ignore IPC errors — desktop will log them
+    });
+  }, [settings.connection.autoDetectIp]);
   const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
     const saved = localStorage.getItem(PANEL_WIDTH_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : 50; // Default 50% of viewport

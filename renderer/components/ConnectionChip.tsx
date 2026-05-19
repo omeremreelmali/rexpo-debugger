@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ConnectionInfo, NetworkInterfaceInfo } from "../types";
+import { useSettings } from "../state/SettingsContext";
 import "./ConnectionChip.css";
 
 const SELECTED_INTERFACE_KEY = "rexpo-debugger-selected-interface";
@@ -8,7 +9,29 @@ function buildWsUrl(address: string, port: number): string {
   return `ws://${address}:${port}`;
 }
 
+/**
+ * Normalizes a user-typed override like "192.168.1.42:5051", "ws://host:5051",
+ * or "host:5051" into a full ws:// URL. Returns null if the input cannot be
+ * reasonably parsed.
+ */
+function normalizeManualWsUrl(raw: string, fallbackPort: number): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  let value = trimmed;
+  if (!/^wss?:\/\//i.test(value)) value = `ws://${value}`;
+  try {
+    const u = new URL(value);
+    const host = u.hostname;
+    if (!host) return null;
+    const port = u.port || String(fallbackPort);
+    return `ws://${host}:${port}`;
+  } catch {
+    return null;
+  }
+}
+
 export function ConnectionChip() {
+  const { settings } = useSettings();
   const [info, setInfo] = useState<ConnectionInfo | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(() =>
     localStorage.getItem(SELECTED_INTERFACE_KEY)
@@ -27,6 +50,12 @@ export function ConnectionChip() {
       window.electron.removeConnectionStateListener();
     };
   }, []);
+
+  // Settings-driven manual override takes priority over auto-detected IPs.
+  const manualUrl = normalizeManualWsUrl(
+    settings.connection.manualWsUrl,
+    info?.port ?? settings.connection.port
+  );
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -86,26 +115,35 @@ export function ConnectionChip() {
     }
   };
 
-  const primaryUrl = selectedInterface
+  const primaryUrl = manualUrl
+    ? manualUrl
+    : selectedInterface
     ? buildWsUrl(selectedInterface.address, port)
     : `ws://localhost:${port}`;
 
   return (
     <div className="connection-chip-wrapper" ref={wrapperRef}>
       <button
-        className={`connection-chip ${hasMultiple ? "connection-chip-clickable" : ""}`}
-        onClick={() => hasMultiple && setIsOpen(!isOpen)}
-        title={hasMultiple ? "Tıkla — başka network interface'i seç" : primaryUrl}
+        className={`connection-chip ${hasMultiple && !manualUrl ? "connection-chip-clickable" : ""}`}
+        onClick={() => hasMultiple && !manualUrl && setIsOpen(!isOpen)}
+        title={
+          manualUrl
+            ? `Manuel override (Settings → Bağlantı → Manuel host:port): ${primaryUrl}`
+            : hasMultiple
+            ? "Tıkla — başka network interface'i seç"
+            : primaryUrl
+        }
         type="button"
       >
         <span className={`connection-dot ${dotClass}`} />
+        {manualUrl && <span className="connection-manual-badge">M</span>}
         <span className="connection-text">{primaryUrl}</span>
         {connectedClients > 0 && (
           <span className="connection-count" title={`${connectedClients} cihaz bağlı`}>
             {connectedClients}
           </span>
         )}
-        {hasMultiple && <span className="connection-caret">▾</span>}
+        {hasMultiple && !manualUrl && <span className="connection-caret">▾</span>}
         <button
           className="connection-copy"
           onClick={(e) => selectedInterface && handleCopy(e, selectedInterface.address)}
@@ -116,7 +154,7 @@ export function ConnectionChip() {
         </button>
       </button>
 
-      {isOpen && hasMultiple && (
+      {isOpen && hasMultiple && !manualUrl && (
         <div className="connection-dropdown">
           <div className="connection-dropdown-header">Network interface seç</div>
           {interfaces.map((iface) => {

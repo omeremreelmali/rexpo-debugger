@@ -180,6 +180,18 @@ function startWebSocketServer() {
 
   ipcMain.handle("get-connection-info", () => getConnectionInfo());
 
+  ipcMain.handle("set-mdns-enabled", (_event, enabled: boolean) => {
+    if (enabled) {
+      // Re-publish only if not already publishing
+      if (!publishedService) {
+        startMdns();
+      }
+    } else {
+      stopMdns();
+    }
+    return { mdnsRunning: publishedService !== null };
+  });
+
   const ips = getLocalIPv4Addresses();
   if (ips.length > 0) {
     console.log(`[Inspector] WebSocket server started on port ${WS_PORT}`);
@@ -194,6 +206,13 @@ function startWebSocketServer() {
     connectedClientCount += 1;
     console.log(`[Inspector] Client connected (total: ${connectedClientCount})`);
     broadcastConnectionState();
+
+    // Signal to the renderer that a fresh agent connection (i.e. app init or
+    // reload) just happened. The renderer's auto-clear behaviour (RED-157)
+    // listens to this event.
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("session-started");
+    }
 
     ws.on("message", (data: Buffer) => {
       try {

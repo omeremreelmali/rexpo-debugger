@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Added — Network context menu (RED-159)
+
+- 🖱 **Right-click on any network row** opens a context menu with: Copy URL, Copy as cURL, Copy as JSON, Replay, Edit & Replay, Delete request, Clear all requests.
+- 🧹 New `DELETE_REQUEST` action removes a single request from the list (and unselects it if it was the active selection). `DELETE_CONSOLE_LOG` added for symmetry.
+- ♻️ Shared `replayRequest()` / `sendReplayCommand()` helpers in `utils/replayRequest.ts` — used by both `RequestDetails` and the new context menu.
+- 🎯 Reusable `ContextMenu` component with separators, destructive items, icons, shortcuts, viewport-aware positioning.
+
+### ✨ Added — Edit & Replay editor (RED-162)
+
+- ✏️ **Full editor modal** triggered from `Edit & Replay…` in the context menu — lets you tweak a captured request before re-sending it.
+- 🔧 Editable: method, URL, headers (add / remove / disable individually), JSON body with pretty-print + validation.
+- 🔒 Sensitive headers (`Authorization`, `Cookie`, `x-api-key`, `x-auth-token`) are masked by default with a 👁 reveal toggle.
+- 🚫 Send button disables itself when the JSON body is structurally invalid; tooltip explains why.
+- ⌨ Esc closes the modal; click-outside closes.
+
+### ✨ Added — Auto-clear on agent connect (RED-157)
+
+- 🛁 Electron emits a `session-started` IPC event the moment a new agent connects (i.e. app reload or fresh launch).
+- 📋 Renderer listens; clears Network and/or Console lists based on the per-tab `autoClearOnInit` settings (default: on).
+- The setting was previously shell-only; it is now wired end-to-end.
+
+### ✨ Added — Independent agent enable/disable (RED-158)
+
+- 🛰 `agents.networkEnabled` / `agents.consoleEnabled` Settings toggles are now wired.
+- Messages of the disabled type are dropped at the dispatch boundary (so the rest of the state stays clean and the other agent is unaffected).
+- Each panel renders a dedicated "agent disabled" empty state that points the user back to Settings → Agents.
+
+### ✨ Added — RED-160 follow-ups (settings → behaviour wiring)
+
+- 🛰 **Auto-detect IP (mDNS) toggle** now actually stops the Bonjour publisher on the Electron side via a new `set-mdns-enabled` IPC handler. Re-enabling re-publishes the service. Agents will fall back to manual `wsUrl` while disabled.
+- 🔗 **Manuel host:port override** is wired into the header `ConnectionChip` — when set, it becomes the displayed/copyable URL and overrides the dropdown selection. A small **M** badge signals the override is active.
+- 🎨 Theme dropdown is still UI-only (full light theme requires a CSS-wide refactor; remaining in `[RED-160 follow-up]`).
+
 ### ✨ Added — Settings panel (shell)
 
 - ⚙ **Settings modal** accessible from the header gear button — groups every configurable knob in one place: Network, Console, Connection, Agents, UI.

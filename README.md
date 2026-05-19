@@ -41,10 +41,19 @@ A professional debugging tool similar to **Flipper** and **Chrome DevTools** for
 
 ### Settings (NEW)
 
-- ⚙ **Settings modal**: Manage history limits, default log level, manual host overrides, and more from the header
+- ⚙ **Settings modal**: Manage history limits, default log level, manual host overrides, agent toggles, mDNS on/off, and more from the header
 - 💾 **Persisted**: Your preferences survive app restarts (stored in `localStorage`)
 - 📜 **Live FIFO trimming**: Network and console panels honour the configured history limits in real time
+- 🛁 **Auto-clear on init**: Console and Network lists reset automatically when the agent reconnects (toggleable per panel)
+- 🛰 **Independent agent toggles**: Disable Network or Console capture independently without restarting the app
+- 🔗 **Manuel host:port override**: Override the auto-detected debugger URL — useful on networks that block mDNS
 - 🚦 **Reset to defaults**: One-click rollback when you've experimented too much
+
+### Power-user network workflow (NEW)
+
+- 🖱 **Right-click any request** → Copy URL / cURL / JSON, Replay, Edit & Replay, Delete, Clear all
+- ✏️ **Edit & Replay**: Tweak method, URL, headers (add/remove/disable, sensitive header masking), and JSON body before re-sending — no more bouncing to Postman for variations
+- 🧹 **Delete individual requests**: Prune noise without nuking the whole list
 
 ### General
 
@@ -538,6 +547,8 @@ If you don't want a native rebuild, switch to manual `wsUrl` instead.
 - [ ] WebSocket traffic monitoring
 - [ ] GraphQL query/mutation visualization
 - [x] ✅ Request replay feature
+- [x] ✅ **Edit & Replay** — modify method / URL / headers / body before re-sending
+- [x] ✅ Right-click context menu (copy URL, cURL, JSON, replay, delete)
 - [ ] Mock response feature
 
 ### Discovery & Connection
@@ -546,7 +557,19 @@ If you don't want a native rebuild, switch to manual `wsUrl` instead.
 - [x] ✅ Live IP detection + copy chip in desktop header
 - [x] ✅ Expo config plugin (permissions auto-inject)
 - [x] ✅ Network change re-publish
+- [x] ✅ Manuel host:port override (overrides auto-detect)
+- [x] ✅ Auto-detect (mDNS) toggle
 - [ ] QR code pairing (mDNS fallback for blocked networks)
+
+### Settings & UX
+
+- [x] ✅ Settings modal with localStorage persistence
+- [x] ✅ Auto-clear panels on agent reconnect
+- [x] ✅ Independent Network / Console agent toggles
+- [x] ✅ Max history limits (FIFO trim)
+- [x] ✅ Default log level
+- [ ] Full light/dark theme (CSS variable refactor)
+- [ ] Network port live-restart from Settings
 
 ### Console
 

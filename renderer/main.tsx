@@ -12,8 +12,11 @@ declare global {
       removeNetworkMessageListener: () => void;
       sendCommand: (command: any) => void;
       getConnectionInfo: () => Promise<ConnectionInfo>;
+      setMdnsEnabled: (enabled: boolean) => Promise<{ mdnsRunning: boolean }>;
       onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
       removeConnectionStateListener: () => void;
+      onSessionStarted: (callback: () => void) => void;
+      removeSessionStartedListener: () => void;
     };
   }
 }

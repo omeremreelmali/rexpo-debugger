@@ -1,10 +1,24 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNetwork } from "../state/NetworkContext";
+import { useSettings } from "../state/SettingsContext";
 import { RequestState } from "../types";
+import { copyToClipboard, generateCurlCommand } from "../utils/curlGenerator";
+import { replayRequest } from "../utils/replayRequest";
+import { ContextMenu, ContextMenuItem } from "./ContextMenu";
+import { EditReplayModal } from "./EditReplayModal";
 import "./NetworkTable.css";
+
+interface ContextMenuState {
+  request: RequestState;
+  x: number;
+  y: number;
+}
 
 export function NetworkTable() {
   const { state, dispatch } = useNetwork();
+  const { settings } = useSettings();
+  const [menu, setMenu] = useState<ContextMenuState | null>(null);
+  const [editTarget, setEditTarget] = useState<RequestState | null>(null);
 
   const filteredRequests = useMemo(() => {
     let filtered = state.requests;
@@ -64,9 +78,75 @@ export function NetworkTable() {
     return url.slice(0, maxLength) + "...";
   };
 
+  const handleContextMenu = (e: React.MouseEvent, request: RequestState) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ request, x: e.clientX, y: e.clientY });
+  };
+
+  const closeMenu = () => setMenu(null);
+
+  const buildMenuItems = (request: RequestState): ContextMenuItem[] => [
+    {
+      id: "copy-url",
+      icon: "🔗",
+      label: "Copy URL",
+      onClick: () => void copyToClipboard(request.url),
+    },
+    {
+      id: "copy-curl",
+      icon: "📋",
+      label: "Copy as cURL",
+      onClick: () => void copyToClipboard(generateCurlCommand(request)),
+    },
+    {
+      id: "copy-json",
+      icon: "🧾",
+      label: "Copy as JSON",
+      onClick: () =>
+        void copyToClipboard(JSON.stringify(request, null, 2)),
+    },
+    { id: "sep-1", label: "", separator: true },
+    {
+      id: "replay",
+      icon: "🔁",
+      label: "Replay",
+      onClick: () => replayRequest(request),
+    },
+    {
+      id: "edit-replay",
+      icon: "✏️",
+      label: "Edit & Replay…",
+      onClick: () => setEditTarget(request),
+    },
+    { id: "sep-2", label: "", separator: true },
+    {
+      id: "delete",
+      icon: "🗑",
+      label: "Delete request",
+      destructive: true,
+      onClick: () => dispatch({ type: "DELETE_REQUEST", payload: request.id }),
+    },
+    {
+      id: "clear-all",
+      icon: "🧹",
+      label: "Clear all requests",
+      destructive: true,
+      onClick: () => dispatch({ type: "CLEAR_NETWORK" }),
+    },
+  ];
+
   return (
     <div className="network-table-container">
-      {filteredRequests.length === 0 ? (
+      {!settings.agents.networkEnabled ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">🚫</div>
+          <p>Network agent disabled</p>
+          <p className="empty-state-hint">
+            Settings → Agents → Network agent enabled
+          </p>
+        </div>
+      ) : filteredRequests.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">📡</div>
           <p>No network requests yet</p>
@@ -93,6 +173,7 @@ export function NetworkTable() {
                   state.selectedRequestId === request.id ? "selected" : ""
                 }`}
                 onClick={() => dispatch({ type: "SELECT_REQUEST", payload: request.id })}
+                onContextMenu={(e) => handleContextMenu(e, request)}
               >
                 <td>
                   <span className={`method-badge method-${request.method.toLowerCase()}`}>
@@ -117,6 +198,21 @@ export function NetworkTable() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {menu && (
+        <ContextMenu
+          items={buildMenuItems(menu.request)}
+          position={{ x: menu.x, y: menu.y }}
+          onClose={closeMenu}
+        />
+      )}
+
+      {editTarget && (
+        <EditReplayModal
+          request={editTarget}
+          onClose={() => setEditTarget(null)}
+        />
       )}
     </div>
   );

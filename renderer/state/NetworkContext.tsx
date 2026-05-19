@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useRef, ReactNode } from "react";
 import { NetworkMessage, RequestState, FilterMethod, FilterStatus, ConsoleLog, FilterLogLevel } from "../types";
+import { useSettings } from "./SettingsContext";
 
 type TabType = "network" | "console";
 
@@ -32,6 +33,8 @@ type NetworkAction =
   | { type: "CLEAR_ALL" }
   | { type: "CLEAR_NETWORK" }
   | { type: "CLEAR_CONSOLE" }
+  | { type: "DELETE_REQUEST"; payload: string }
+  | { type: "DELETE_CONSOLE_LOG"; payload: string }
   | {
       type: "SET_LIMITS";
       payload: { maxRequestHistory: number; maxLogHistory: number };
@@ -207,6 +210,22 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
         selectedConsoleId: null,
       };
 
+    case "DELETE_REQUEST":
+      return {
+        ...state,
+        requests: state.requests.filter((r) => r.id !== action.payload),
+        selectedRequestId:
+          state.selectedRequestId === action.payload ? null : state.selectedRequestId,
+      };
+
+    case "DELETE_CONSOLE_LOG":
+      return {
+        ...state,
+        consoleLogs: state.consoleLogs.filter((l) => l.id !== action.payload),
+        selectedConsoleId:
+          state.selectedConsoleId === action.payload ? null : state.selectedConsoleId,
+      };
+
     case "SET_LIMITS":
       return {
         ...state,
@@ -231,6 +250,21 @@ const NetworkContext = createContext<NetworkContextValue | undefined>(undefined)
 
 export function NetworkProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(networkReducer, initialState);
+  const { settings } = useSettings();
+
+  // RED-158: incoming messages are filtered by agent enable/disable. We mirror
+  // the relevant settings into a ref so the WS listener always reads the
+  // current values without needing to be re-bound when settings change.
+  const agentEnabledRef = useRef({
+    network: settings.agents.networkEnabled,
+    console: settings.agents.consoleEnabled,
+  });
+  useEffect(() => {
+    agentEnabledRef.current = {
+      network: settings.agents.networkEnabled,
+      console: settings.agents.consoleEnabled,
+    };
+  }, [settings.agents.networkEnabled, settings.agents.consoleEnabled]);
 
   useEffect(() => {
     if (!window.electron) {
@@ -239,6 +273,14 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     }
 
     window.electron.onNetworkMessage((message: NetworkMessage) => {
+      const flags = agentEnabledRef.current;
+      if (message.type === "console" && !flags.console) return;
+      if (
+        (message.type === "request" || message.type === "response") &&
+        !flags.network
+      ) {
+        return;
+      }
       dispatch({ type: "ADD_MESSAGE", payload: message });
     });
 
