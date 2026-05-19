@@ -22,6 +22,7 @@ Professional debugging tool for Expo and React Native apps. Inspect network traf
 
 - ✅ **No more hardcoded IPs** — the agent finds the desktop debugger over your local Wi-Fi automatically via mDNS / Bonjour
 - ✅ **Survives Wi-Fi changes** — when your machine's IP changes, the agent reconnects without code edits
+- ✅ **Auto-reconnect** — port change, desktop restart, Wi-Fi blip or VPN toggle no longer needs an app reload; the agent retries on its own with exponential backoff (1s → 2s → 4s → 8s, capped at 10s) until the connection is back
 - ✅ **Expo config plugin** — required iOS/Android permissions are injected automatically; you never edit `Info.plist` or `AndroidManifest.xml`
 - ✅ **Production-safe** — permissions and runtime code are stripped from release builds
 
@@ -195,7 +196,27 @@ initConsoleAgent({
 
 ### Debug mode
 
-The agent runs silently by default and only logs critical failures. Set `debug: true` on either agent to see verbose output (discovery, connection, request/response capture, axios interceptor setup, periodic health checks).
+The agent runs silently by default and only logs critical failures. Set `debug: true` on either agent to see verbose output (discovery, connection, request/response capture, axios interceptor setup, periodic health checks, **reconnect attempts**).
+
+## 🔁 Auto-Reconnect
+
+Both agents reconnect to the desktop automatically when the connection drops — no app reload required. Common scenarios this handles:
+
+| Scenario | What happens |
+|---|---|
+| Desktop closed and reopened | Agent keeps retrying until the inspector is back, then connects to whatever port it picks |
+| **Settings → Network port → Apply** | Agent's socket closes on the old port, retries, re-discovers via mDNS, connects to the new port within a few seconds |
+| Wi-Fi blip | Once the connection is back, the next retry succeeds |
+| VPN toggle | Agent re-discovers and reconnects |
+
+How the retry loop works:
+
+- The agent remembers its initial strategy: either the explicit `wsUrl` you passed, or the mDNS auto-discovery path.
+- On socket close (or a failed initial discovery), it schedules a retry with **exponential backoff**: 1s, 2s, 4s, 8s, capped at 10s.
+- The counter resets to 0 on every successful connect, so the next disconnect starts fresh from 1s instead of resuming a long delay.
+- In auto-discovery mode each retry first calls `resetDiscoveryCache()` and then `discoverDebugger()` again, so a desktop that has moved to a new port (e.g. via the port live-restart in Settings) gets picked up on the next mDNS browse.
+
+**Heads-up:** when the agent reconnects, the desktop counts it as a new session and fires `session-started`. If you have `autoClearOnInit` enabled in Settings (default), captured history will clear on reconnect. Toggle it off in Settings → Network / Console if you'd rather keep the history.
 
 ## 🔌 Expo Config Plugin
 
@@ -249,6 +270,19 @@ EAS_BUILD_PROFILE=production npx expo prebuild --no-install --platform ios --cle
 ```
 
 ## 🛠 Troubleshooting
+
+### Agent keeps retrying / "🔁 Will retry connection in Xms"
+
+That's the auto-reconnect logic doing its job — the desktop is unreachable
+right now. Common causes:
+
+- Desktop inspector isn't running → start it
+- Device and computer dropped off the same Wi-Fi → reconnect them
+- You changed the port in Settings but the new port is blocked by your firewall → check System Settings → Network → Firewall
+
+If the auto-discovery path can't find the service after the initial timeout
+(default 10s), the agent will schedule another full retry cycle — so the
+"timed out" error is recoverable, not terminal.
 
 ### Auto-discovery never finds the debugger
 

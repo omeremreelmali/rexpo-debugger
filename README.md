@@ -38,6 +38,7 @@ A professional debugging tool similar to **Flipper** and **Chrome DevTools** for
 - 🔌 **Expo config plugin**: iOS / Android permissions are injected automatically; you never touch `Info.plist` or `AndroidManifest.xml`
 - 🛡️ **Production-safe**: Permissions and runtime code are stripped from release builds — App Store / Play Store binaries see nothing
 - 🧭 **Live connection chip**: Desktop header shows the detected IP(s) with a copy button and a status dot for connected clients
+- 🔁 **Auto-reconnect**: Agent reconnects on its own after desktop restarts, port changes, Wi-Fi blips, or VPN toggles — no app reload needed (exponential backoff: 1s → 2s → 4s → 8s → 10s cap)
 
 ### Settings (NEW)
 
@@ -547,8 +548,9 @@ If you don't want a native rebuild, switch to manual `wsUrl` instead.
 - [ ] WebSocket traffic monitoring
 - [ ] GraphQL query/mutation visualization
 - [x] ✅ Request replay feature
-- [x] ✅ **Edit & Replay** — modify method / URL / headers / body before re-sending
-- [x] ✅ Right-click context menu (copy URL, cURL, JSON, replay, delete)
+- [x] ✅ **Edit & Replay** — modify method / URL / **query params** / headers / body before re-sending
+- [x] ✅ Right-click context menu (copy URL, cURL, JSON, replay, **save response to file**, delete)
+- [x] ✅ Toast feedback for copy / save actions
 - [ ] Mock response feature
 
 ### Discovery & Connection
@@ -559,6 +561,7 @@ If you don't want a native rebuild, switch to manual `wsUrl` instead.
 - [x] ✅ Network change re-publish
 - [x] ✅ Manuel host:port override (overrides auto-detect)
 - [x] ✅ Auto-detect (mDNS) toggle
+- [x] ✅ **Auto-reconnect** with exponential backoff (port change / desktop restart / Wi-Fi blip)
 - [ ] QR code pairing (mDNS fallback for blocked networks)
 
 ### Settings & UX
