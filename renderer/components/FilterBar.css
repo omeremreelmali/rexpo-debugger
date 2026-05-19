@@ -115,3 +115,24 @@
   padding: 0 8px;
 }
 
+.settings-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.settings-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #007acc;
+  color: #ffffff;
+}
+

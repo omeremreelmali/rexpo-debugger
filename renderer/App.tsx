@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { NetworkProvider, useNetwork } from "./state/NetworkContext";
+import { SettingsProvider, useSettings } from "./state/SettingsContext";
 import { FilterBar } from "./components/FilterBar";
 import { NetworkTable } from "./components/NetworkTable";
 import { RequestDetails } from "./components/RequestDetails";
@@ -13,6 +14,25 @@ const MIN_RIGHT_PANEL_WIDTH = 300;
 
 function AppContent() {
   const { state, dispatch } = useNetwork();
+  const { settings } = useSettings();
+
+  // Sync persisted history limits from settings to the network state.
+  useEffect(() => {
+    dispatch({
+      type: "SET_LIMITS",
+      payload: {
+        maxRequestHistory: settings.network.maxRequestHistory,
+        maxLogHistory: settings.console.maxLogHistory,
+      },
+    });
+  }, [settings.network.maxRequestHistory, settings.console.maxLogHistory, dispatch]);
+
+  // Apply the persisted default log level only on first mount so the user's
+  // runtime changes to the filter aren't overwritten on subsequent renders.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    dispatch({ type: "SET_FILTER_LOG_LEVEL", payload: settings.console.defaultLogLevel });
+  }, []);
   const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
     const saved = localStorage.getItem(PANEL_WIDTH_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : 50; // Default 50% of viewport
@@ -134,9 +154,11 @@ function AppContent() {
 
 export function App() {
   return (
-    <NetworkProvider>
-      <AppContent />
-    </NetworkProvider>
+    <SettingsProvider>
+      <NetworkProvider>
+        <AppContent />
+      </NetworkProvider>
+    </SettingsProvider>
   );
 }
 

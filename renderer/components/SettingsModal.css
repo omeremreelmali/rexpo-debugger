@@ -1,0 +1,225 @@
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: settings-fade-in 0.12s ease-out;
+}
+
+@keyframes settings-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.settings-modal {
+  width: min(560px, 90vw);
+  max-height: 85vh;
+  background: #252526;
+  border: 1px solid #3e3e42;
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #3e3e42;
+  background: #2d2d30;
+}
+
+.settings-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+.settings-close {
+  background: transparent;
+  border: none;
+  color: #cccccc;
+  font-size: 16px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.settings-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 18px 16px;
+}
+
+.settings-section {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(62, 62, 66, 0.5);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+}
+
+.settings-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.settings-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row-label > span:first-child {
+  font-size: 13px;
+  color: #d4d4d4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-row-hint {
+  font-size: 11px;
+  color: #6e6e6e;
+  font-weight: normal;
+  line-height: 1.4;
+}
+
+.setting-pending {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #d7ba7d;
+  background: rgba(215, 186, 125, 0.12);
+  border: 1px solid rgba(215, 186, 125, 0.3);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.settings-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #007acc;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.settings-row input[type="number"],
+.settings-row input[type="text"] {
+  width: 160px;
+  padding: 5px 8px;
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.settings-row input[type="text"] {
+  width: 200px;
+}
+
+.settings-row input:focus {
+  border-color: #007acc;
+}
+
+.settings-row select {
+  width: 160px;
+  padding: 5px 8px;
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.settings-row select:focus {
+  border-color: #007acc;
+}
+
+.settings-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid #3e3e42;
+  background: #2d2d30;
+}
+
+.settings-reset,
+.settings-done {
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s ease;
+}
+
+.settings-reset {
+  background: transparent;
+  color: #cccccc;
+  border: 1px solid #3e3e42;
+}
+
+.settings-reset:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.settings-done {
+  background: #0e639c;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.settings-done:hover {
+  background: #1177bb;
+}

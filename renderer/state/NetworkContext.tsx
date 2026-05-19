@@ -14,6 +14,9 @@ interface NetworkState {
   filterLogLevel: FilterLogLevel;
   isPaused: boolean;
   activeTab: TabType;
+  // Max entries kept in memory before FIFO trimming. Driven by Settings.
+  maxRequestHistory: number;
+  maxLogHistory: number;
 }
 
 type NetworkAction =
@@ -28,7 +31,11 @@ type NetworkAction =
   | { type: "TOGGLE_PAUSE" }
   | { type: "CLEAR_ALL" }
   | { type: "CLEAR_NETWORK" }
-  | { type: "CLEAR_CONSOLE" };
+  | { type: "CLEAR_CONSOLE" }
+  | {
+      type: "SET_LIMITS";
+      payload: { maxRequestHistory: number; maxLogHistory: number };
+    };
 
 const initialState: NetworkState = {
   requests: [],
@@ -41,7 +48,17 @@ const initialState: NetworkState = {
   filterLogLevel: "ALL",
   isPaused: false,
   activeTab: "network",
+  maxRequestHistory: 1000,
+  maxLogHistory: 1000,
 };
+
+function trimRequests(arr: RequestState[], max: number): RequestState[] {
+  return arr.length > max ? arr.slice(0, max) : arr;
+}
+
+function trimLogs(arr: ConsoleLog[], max: number): ConsoleLog[] {
+  return arr.length > max ? arr.slice(0, max) : arr;
+}
 
 function networkReducer(state: NetworkState, action: NetworkAction): NetworkState {
   switch (action.type) {
@@ -59,7 +76,10 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
           timestamp: message.timestamp,
           stack: message.stack,
         };
-        return { ...state, consoleLogs: [newLog, ...state.consoleLogs] };
+        return {
+          ...state,
+          consoleLogs: trimLogs([newLog, ...state.consoleLogs], state.maxLogHistory),
+        };
       }
 
       // Handle network messages
@@ -88,7 +108,13 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
             requestBodySnippet: message.requestBodySnippet,
             startedAt: message.startedAt,
           };
-          return { ...state, requests: [newRequest, ...state.requests] };
+          return {
+            ...state,
+            requests: trimRequests(
+              [newRequest, ...state.requests],
+              state.maxRequestHistory
+            ),
+          };
         }
       } else {
         // Response message
@@ -123,7 +149,13 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
             isError: message.isError,
             errorMessage: message.errorMessage,
           };
-          return { ...state, requests: [newRequest, ...state.requests] };
+          return {
+            ...state,
+            requests: trimRequests(
+              [newRequest, ...state.requests],
+              state.maxRequestHistory
+            ),
+          };
         }
       }
     }
@@ -173,6 +205,16 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
         ...state,
         consoleLogs: [],
         selectedConsoleId: null,
+      };
+
+    case "SET_LIMITS":
+      return {
+        ...state,
+        maxRequestHistory: action.payload.maxRequestHistory,
+        maxLogHistory: action.payload.maxLogHistory,
+        // Apply new limits immediately to existing data.
+        requests: trimRequests(state.requests, action.payload.maxRequestHistory),
+        consoleLogs: trimLogs(state.consoleLogs, action.payload.maxLogHistory),
       };
 
     default:

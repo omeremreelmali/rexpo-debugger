@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { FilterMethod, FilterStatus, FilterLogLevel } from "../types";
 import { ConnectionChip } from "./ConnectionChip";
+import { SettingsModal } from "./SettingsModal";
 import "./FilterBar.css";
 
 export function FilterBar() {
   const { state, dispatch } = useNetwork();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const methods: FilterMethod[] = [
     "ALL",
@@ -118,7 +121,18 @@ export function FilterBar() {
         <span className="request-count">
           {itemCount} {itemLabel}
         </span>
+        <button
+          className="settings-button"
+          onClick={() => setIsSettingsOpen(true)}
+          title="Settings"
+          type="button"
+          aria-label="Open settings"
+        >
+          ⚙
+        </button>
       </div>
+
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

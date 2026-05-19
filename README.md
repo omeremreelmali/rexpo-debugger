@@ -39,6 +39,13 @@ A professional debugging tool similar to **Flipper** and **Chrome DevTools** for
 - 🛡️ **Production-safe**: Permissions and runtime code are stripped from release builds — App Store / Play Store binaries see nothing
 - 🧭 **Live connection chip**: Desktop header shows the detected IP(s) with a copy button and a status dot for connected clients
 
+### Settings (NEW)
+
+- ⚙ **Settings modal**: Manage history limits, default log level, manual host overrides, and more from the header
+- 💾 **Persisted**: Your preferences survive app restarts (stored in `localStorage`)
+- 📜 **Live FIFO trimming**: Network and console panels honour the configured history limits in real time
+- 🚦 **Reset to defaults**: One-click rollback when you've experimented too much
+
 ### General
 
 - 💻 **Cross-platform**: Support for macOS, Windows, and Linux

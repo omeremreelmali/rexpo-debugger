@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ Added — Settings panel (shell)
+
+- ⚙ **Settings modal** accessible from the header gear button — groups every configurable knob in one place: Network, Console, Connection, Agents, UI.
+- 💾 **Persistence layer** via `localStorage` (key: `rexpo-debugger-settings`). Settings survive restarts. New defaults are merged in automatically when the package adds fields, so users don't lose their config across upgrades.
+- ✅ **Wired now**:
+  - `network.maxRequestHistory` — FIFO trims the request list at the chosen size, applied instantly.
+  - `console.maxLogHistory` — same for console.
+  - `console.defaultLogLevel` — restores the level filter on app boot.
+  - `Reset to defaults` button.
+- ⏳ **Shell-only (no behaviour yet — tagged in the UI with the issue that will wire them)**:
+  - `network.autoClearOnInit`, `console.autoClearOnInit` → RED-157
+  - `agents.networkEnabled`, `agents.consoleEnabled` → RED-158
+  - `connection.port` live restart, `connection.autoDetectIp` toggle, `connection.manualWsUrl`, `ui.theme` → RED-160 follow-ups
+
 ### ✨ Added — Zero-config auto-discovery
 
 - 🛰️ **mDNS / Bonjour publisher** in the desktop app — broadcasts itself as `_rexpo._tcp` on the local network, so the agent can find it without a hard-coded IP.
