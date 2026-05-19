@@ -16,14 +16,14 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 /**
- * A small inline tag that flags a setting as not yet wired to runtime behaviour.
- * The setting is still persisted to localStorage — it will be wired by the
- * referenced issue.
+ * A small inline tag that flags a setting as not yet wired to runtime
+ * behaviour. The setting is still persisted to localStorage — it will be
+ * wired in a future release.
  */
-function PendingTag({ issue }: { issue: string }) {
+function ComingSoonTag() {
   return (
-    <span className="setting-pending" title={`Davranış ${issue} ile gelecek`}>
-      {issue}
+    <span className="setting-pending" title="Bu ayar henüz canlı davranışa bağlı değil — yakında">
+      Yakında
     </span>
   );
 }
@@ -77,7 +77,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Auto-clear on app init</span>
-                <PendingTag issue="RED-157" />
+                <span className="settings-row-hint">
+                  Agent yeniden bağlandığında listeyi otomatik temizle
+                </span>
               </div>
               <input
                 type="checkbox"
@@ -120,7 +122,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Auto-clear on app init</span>
-                <PendingTag issue="RED-157" />
+                <span className="settings-row-hint">
+                  Agent yeniden bağlandığında log'ları otomatik temizle
+                </span>
               </div>
               <input
                 type="checkbox"
@@ -185,7 +189,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Network port</span>
-                <PendingTag issue="RED-160 follow-up" />
+                <ComingSoonTag />
+                <span className="settings-row-hint">
+                  Port değişikliği canlı uygulanmıyor — Electron'u yeniden başlat
+                </span>
               </div>
               <input
                 type="number"
@@ -245,7 +252,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Network agent enabled</span>
-                <PendingTag issue="RED-158" />
+                <span className="settings-row-hint">
+                  Kapatınca gelen network event'leri yok sayılır
+                </span>
               </div>
               <input
                 type="checkbox"
@@ -259,7 +268,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Console agent enabled</span>
-                <PendingTag issue="RED-158" />
+                <span className="settings-row-hint">
+                  Kapatınca gelen console log'ları yok sayılır
+                </span>
               </div>
               <input
                 type="checkbox"
@@ -278,7 +289,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Theme</span>
-                <PendingTag issue="RED-160 follow-up" />
+                <ComingSoonTag />
+                <span className="settings-row-hint">
+                  Şu an sadece koyu tema mevcut
+                </span>
               </div>
               <select
                 value={settings.ui.theme}
