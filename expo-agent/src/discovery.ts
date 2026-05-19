@@ -137,7 +137,25 @@ export function discoverDebugger(
       return;
     }
 
+    // We can't trust a single "resolved" event because the local network may
+    // hold many stale entries from previous runs (mDNS records persist for the
+    // duration of their TTL, which can be tens of minutes; bonjour-service
+    // also creates collision-suffixed names like "...-124" when re-publishing
+    // before old records have expired). Instead we collect EVERY matching
+    // service during a short collection window, build a flat list of candidate
+    // URLs (one per advertised IPv4 + the mDNS hostname), rank them by
+    // likely-LAN-ness, and resolve with the best.
+    //
+    // The collection window is shorter than the full timeout: we resolve as
+    // soon as we've gathered enough useful candidates, falling back to the
+    // full timeout only if literally nothing answered.
+
+    type Candidate = { url: string; host: string; port: number; name: string; rank: number };
+    const candidates: Candidate[] = [];
     let settled = false;
+    let collectTimer: any = null;
+    const COLLECTION_WINDOW_MS = Math.min(2500, Math.floor(timeoutMs / 2));
+
     const cleanup = () => {
       try {
         zc.removeDeviceListeners();
@@ -151,38 +169,95 @@ export function discoverDebugger(
       }
     };
 
-    const timer = setTimeout(() => {
+    const finalize = () => {
       if (settled) return;
       settled = true;
+      clearTimeout(timer);
+      if (collectTimer) clearTimeout(collectTimer);
       cleanup();
-      reject(
-        new Error(
-          `rexpo-debugger: mDNS discovery timed out after ${timeoutMs}ms. ` +
-            "Make sure the debugger is running on a machine in the same Wi-Fi. " +
-            "If your network blocks mDNS, pass `wsUrl` explicitly."
-        )
-      );
+
+      if (candidates.length === 0) {
+        reject(
+          new Error(
+            "rexpo-debugger: no resolvable _rexpo._tcp service found on the local network."
+          )
+        );
+        return;
+      }
+
+      // Pick the lowest-rank candidate. Ties break on insertion order (i.e.
+      // services that resolved first), which tends to be the live one.
+      candidates.sort((a, b) => a.rank - b.rank);
+      const winner = candidates[0];
+
+      if (candidates.length > 1) {
+        log(
+          `Considered ${candidates.length} candidates:`,
+          candidates.map((c) => `${c.url} (rank ${c.rank})`).join(", ")
+        );
+      }
+      log(`Picked: ${winner.url} (${winner.name})`);
+
+      const result: DiscoveredService = {
+        url: winner.url,
+        host: winner.host,
+        port: winner.port,
+        name: winner.name,
+      };
+      cached = result;
+      resolve(result);
+    };
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      if (candidates.length > 0) {
+        // We have something, just pick the best.
+        finalize();
+      } else {
+        settled = true;
+        cleanup();
+        reject(
+          new Error(
+            `rexpo-debugger: mDNS discovery timed out after ${timeoutMs}ms. ` +
+              "Make sure the debugger is running on a machine in the same Wi-Fi. " +
+              "If your network blocks mDNS, pass `wsUrl` explicitly."
+          )
+        );
+      }
     }, timeoutMs);
 
+    const ipv4Re = /^\d{1,3}(\.\d{1,3}){3}$/;
     zc.on("resolved", (service: any) => {
       if (settled) return;
       log("resolved:", service?.name, service?.host, service?.port, service?.addresses);
 
-      const host = pickAddress(service, log);
-      if (!host || !service?.port) return;
+      if (!service?.port || typeof service.port !== "number") return;
 
-      settled = true;
-      clearTimeout(timer);
-      cleanup();
+      const ipv4s: string[] = (service.addresses || []).filter((a: string) =>
+        ipv4Re.test(a)
+      );
+      const port: number = service.port;
+      const name: string = service.name || serviceType;
 
-      const result: DiscoveredService = {
-        url: buildWsUrl(host, service.port),
-        host,
-        port: service.port,
-        name: service.name || serviceType,
-      };
-      cached = result;
-      resolve(result);
+      // Add every IPv4 address as a candidate so a service that advertises
+      // both Wi-Fi and VPN IPs gives us two ranked entries to choose from.
+      for (const addr of ipv4s) {
+        candidates.push({
+          url: buildWsUrl(addr, port),
+          host: addr,
+          port,
+          name,
+          rank: ipv4Rank(addr),
+        });
+      }
+
+      // Schedule the first finalize a short window after we get our first
+      // resolution, so further resolutions can race in and we pick the best.
+      // After that initial window, finalize immediately on any new resolution
+      // (the user has already waited enough).
+      if (collectTimer === null && candidates.length > 0) {
+        collectTimer = setTimeout(finalize, COLLECTION_WINDOW_MS);
+      }
     });
 
     zc.on("error", (err: any) => {
