@@ -83,13 +83,13 @@ export function CollectionsPanel() {
 
   const handleReplay = (req: SavedRequest) => {
     replayRequest(toReplayShape(req));
-    toast.show("Replay gönderildi", "success");
+    toast.show("Replay sent", "success");
   };
 
   const handleCopy = async (text: string, label: string) => {
     const ok = await copyToClipboard(text);
     toast.show(
-      ok ? `${label} kopyalandı` : "Kopyalama başarısız",
+      ok ? `${label} copied` : "Copy failed",
       ok ? "success" : "error"
     );
   };
@@ -298,7 +298,7 @@ export function CollectionsPanel() {
           onMove={(newName) => {
             moveRequest(moveDialog.id, newName || undefined);
             toast.show(
-              newName ? `Taşındı: ${newName}` : "Uncategorized'a taşındı",
+              newName ? `Moved to ${newName}` : "Moved to Uncategorized",
               "success"
             );
             setMoveDialog(null);

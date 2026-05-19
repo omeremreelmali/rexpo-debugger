@@ -27,7 +27,7 @@ export function NetworkTable() {
 
   const copyWithToast = async (text: string, label: string) => {
     const ok = await copyToClipboard(text);
-    toast.show(ok ? `${label} kopyalandı` : `Kopyalama başarısız`, ok ? "success" : "error");
+    toast.show(ok ? `${label} copied` : "Copy failed", ok ? "success" : "error");
   };
 
   const filteredRequests = useMemo(() => {
@@ -128,9 +128,9 @@ export function NetworkTable() {
           const result = await saveResponseToFile(request);
           if (result.cancelled) return;
           if (result.ok) {
-            toast.show(`Response kaydedildi: ${result.fileName ?? ""}`, "success");
+            toast.show(`Response saved: ${result.fileName ?? ""}`, "success");
           } else {
-            toast.show(result.error || "Kaydetme başarısız", "error");
+            toast.show(result.error || "Failed to save", "error");
           }
         },
       },
@@ -141,7 +141,7 @@ export function NetworkTable() {
         label: "Replay",
         onClick: () => {
           replayRequest(request);
-          toast.show("Replay gönderildi", "success");
+          toast.show("Replay sent", "success");
         },
       },
       {

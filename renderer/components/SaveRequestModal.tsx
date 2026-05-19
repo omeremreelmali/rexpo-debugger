@@ -99,13 +99,13 @@ export function SaveRequestModal({ source, editingId, onClose }: SaveRequestModa
 
     if (isEdit && editingId) {
       updateRequest(editingId, payload);
-      toast.show("Saved request güncellendi", "success");
+      toast.show("Saved request updated", "success");
     } else {
       saveRequest(payload);
       toast.show(
         resolvedCollection
-          ? `Kaydedildi: ${resolvedCollection}`
-          : "Kaydedildi: Uncategorized",
+          ? `Saved to ${resolvedCollection}`
+          : "Saved to Uncategorized",
         "success"
       );
     }
@@ -158,20 +158,20 @@ export function SaveRequestModal({ source, editingId, onClose }: SaveRequestModa
         <div className="save-request-body">
           <label className="save-request-field">
             <span className="save-request-label">
-              Name <span className="save-request-optional">(opsiyonel)</span>
+              Name <span className="save-request-optional">(optional)</span>
             </span>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="örn. Login - happy path"
+              placeholder="e.g. Login - happy path"
               autoFocus
             />
           </label>
 
           <fieldset className="save-request-field save-request-collection">
             <legend className="save-request-label">
-              Collection <span className="save-request-optional">(opsiyonel)</span>
+              Collection <span className="save-request-optional">(optional)</span>
             </legend>
 
             <div className="save-request-collection-tabs">
@@ -211,20 +211,20 @@ export function SaveRequestModal({ source, editingId, onClose }: SaveRequestModa
                 type="text"
                 value={collectionNew}
                 onChange={(e) => setCollectionNew(e.target.value)}
-                placeholder="örn. Auth flows"
+                placeholder="e.g. Auth flows"
               />
             )}
           </fieldset>
 
           <label className="save-request-field">
             <span className="save-request-label">
-              Tags <span className="save-request-optional">(opsiyonel, virgülle ayır)</span>
+              Tags <span className="save-request-optional">(optional, comma-separated)</span>
             </span>
             <input
               type="text"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="örn. auth, smoke-test, regression"
+              placeholder="e.g. auth, smoke-test, regression"
             />
             {parsedTags.length > 0 && (
               <div className="save-request-tag-preview">
@@ -239,21 +239,22 @@ export function SaveRequestModal({ source, editingId, onClose }: SaveRequestModa
 
           <label className="save-request-field">
             <span className="save-request-label">
-              Description <span className="save-request-optional">(opsiyonel)</span>
+              Description <span className="save-request-optional">(optional)</span>
             </span>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Bu request ne yapar / ne zaman kullanılır?"
+              placeholder="What does this request do? When is it used?"
             />
           </label>
         </div>
 
         <footer className="save-request-footer">
           <span className="save-request-hint">
-            {state.savedRequests.length} kayıtlı request • {collectionNames.length}{" "}
-            koleksiyon
+            {state.savedRequests.length} saved request
+            {state.savedRequests.length === 1 ? "" : "s"} • {collectionNames.length}{" "}
+            collection{collectionNames.length === 1 ? "" : "s"}
           </span>
           <div className="save-request-footer-actions">
             <button

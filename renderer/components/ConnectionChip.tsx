@@ -73,7 +73,7 @@ export function ConnectionChip() {
     return (
       <div className="connection-chip connection-chip-loading">
         <span className="connection-dot connection-dot-idle" />
-        <span className="connection-text">Bağlanılıyor...</span>
+        <span className="connection-text">Connecting…</span>
       </div>
     );
   }
@@ -128,9 +128,9 @@ export function ConnectionChip() {
         onClick={() => hasMultiple && !manualUrl && setIsOpen(!isOpen)}
         title={
           manualUrl
-            ? `Manuel override (Settings → Bağlantı → Manuel host:port): ${primaryUrl}`
+            ? `Manual override (Settings → Connection → Manual host:port): ${primaryUrl}`
             : hasMultiple
-            ? "Tıkla — başka network interface'i seç"
+            ? "Click to pick a different network interface"
             : primaryUrl
         }
         type="button"
@@ -139,7 +139,7 @@ export function ConnectionChip() {
         {manualUrl && <span className="connection-manual-badge">M</span>}
         <span className="connection-text">{primaryUrl}</span>
         {connectedClients > 0 && (
-          <span className="connection-count" title={`${connectedClients} cihaz bağlı`}>
+          <span className="connection-count" title={`${connectedClients} client${connectedClients === 1 ? "" : "s"} connected`}>
             {connectedClients}
           </span>
         )}
@@ -156,7 +156,7 @@ export function ConnectionChip() {
 
       {isOpen && hasMultiple && !manualUrl && (
         <div className="connection-dropdown">
-          <div className="connection-dropdown-header">Network interface seç</div>
+          <div className="connection-dropdown-header">Pick network interface</div>
           {interfaces.map((iface) => {
             const isSelected = selectedInterface?.address === iface.address;
             return (

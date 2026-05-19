@@ -75,10 +75,10 @@ function buildFilters(ext: string): { name: string; extensions: string[] }[] {
 
 export async function saveResponseToFile(request: RequestState): Promise<SaveResult> {
   if (!request.responseBodySnippet) {
-    return { ok: false, error: "Bu request'in response body'si yok" };
+    return { ok: false, error: "This request has no response body" };
   }
   if (!window.electron?.saveResponseToFile) {
-    return { ok: false, error: "IPC köprüsü bulunamadı" };
+    return { ok: false, error: "IPC bridge not available" };
   }
 
   const { defaultName, ext } = deriveFilename(request);

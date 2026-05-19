@@ -1,8 +1,8 @@
 /**
  * Rexpo Console Inspector Agent
  *
- * Console log yakalama ve inspector'a gönderme işlemlerini yönetir.
- * Tüm console metodlarını (log, warn, error, info, debug) override eder.
+ * Captures console logs and forwards them to the inspector.
+ * Overrides every console method (log, warn, error, info, debug).
  *
  * @example
  * ```ts

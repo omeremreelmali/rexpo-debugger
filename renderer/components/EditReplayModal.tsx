@@ -431,7 +431,7 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
               />
               {body.trim() && looksLikeJson(body) && !bodyValidation.isJson && (
                 <p className="edit-replay-body-error">
-                  ⚠ Geçersiz JSON: {bodyValidation.error}
+                  ⚠ Invalid JSON: {bodyValidation.error}
                 </p>
               )}
             </section>
@@ -450,9 +450,9 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
             title={
               !canSend
                 ? hasBody && looksLikeJson(body) && !bodyValidation.isJson
-                  ? "JSON body geçersiz"
-                  : "URL boş"
-                : "Gönder"
+                  ? "JSON body is invalid"
+                  : "URL is empty"
+                : "Send"
             }
           >
             ▶ Send

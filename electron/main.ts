@@ -290,10 +290,10 @@ async function setNetworkPort(
   newPort: number
 ): Promise<{ ok: boolean; port: number; error?: string }> {
   if (isRestarting) {
-    return { ok: false, port: WS_PORT, error: "Bir restart hâlâ devam ediyor" };
+    return { ok: false, port: WS_PORT, error: "A restart is already in progress" };
   }
   if (!Number.isInteger(newPort) || newPort < 1024 || newPort > 65535) {
-    return { ok: false, port: WS_PORT, error: "Port aralığı 1024–65535 olmalı" };
+    return { ok: false, port: WS_PORT, error: "Port must be between 1024 and 65535" };
   }
   if (newPort === WS_PORT) {
     return { ok: true, port: WS_PORT };

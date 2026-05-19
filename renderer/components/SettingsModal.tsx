@@ -47,7 +47,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const portHasChanged = isPortValid && parsedPort !== settings.connection.port;
   const portRangeError =
     pendingPortInput.trim() !== "" && !isPortValid
-      ? "Port 1024–65535 aralığında olmalı"
+      ? "Port must be between 1024 and 65535"
       : null;
 
   // Free-typing buffers for the history inputs. Like the port field, these
@@ -83,7 +83,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const applyPort = async () => {
     if (!portHasChanged) return;
     if (!window.electron?.setNetworkPort) {
-      setPortStatus({ kind: "error", message: "IPC köprüsü bulunamadı" });
+      setPortStatus({ kind: "error", message: "IPC bridge not available" });
       return;
     }
     setPortStatus({ kind: "applying" });
@@ -100,12 +100,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       } else {
         // Server stayed on the old port; revert the input so the UI matches reality.
         setPendingPortInput(String(result.port));
-        setPortStatus({ kind: "error", message: result.error || "Port değiştirilemedi" });
+        setPortStatus({ kind: "error", message: result.error || "Failed to change port" });
       }
     } catch (err) {
       setPortStatus({
         kind: "error",
-        message: err instanceof Error ? err.message : "Bilinmeyen hata",
+        message: err instanceof Error ? err.message : "Unknown error",
       });
     }
   };
@@ -156,7 +156,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Auto-clear on app init</span>
                 <span className="settings-row-hint">
-                  Agent yeniden bağlandığında listeyi otomatik temizle
+                  Automatically clear the list when the agent reconnects
                 </span>
               </div>
               <input
@@ -172,8 +172,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Max request history</span>
                 <span className="settings-row-hint">
-                  Liste {settings.network.maxRequestHistory} request'i geçince eski kayıtlar
-                  düşer (50–10000)
+                  Older entries drop once the list exceeds{" "}
+                  {settings.network.maxRequestHistory} requests (50–10000)
                 </span>
               </div>
               <input
@@ -205,7 +205,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Auto-clear on app init</span>
                 <span className="settings-row-hint">
-                  Agent yeniden bağlandığında log'ları otomatik temizle
+                  Automatically clear logs when the agent reconnects
                 </span>
               </div>
               <input
@@ -221,7 +221,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Default log level</span>
                 <span className="settings-row-hint">
-                  Açılışta seçili olacak level filtresi
+                  Level filter selected by default on startup
                 </span>
               </div>
               <select
@@ -244,8 +244,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Max log history</span>
                 <span className="settings-row-hint">
-                  Liste {settings.console.maxLogHistory} log'u geçince eski kayıtlar düşer
-                  (50–10000)
+                  Older entries drop once the list exceeds{" "}
+                  {settings.console.maxLogHistory} logs (50–10000)
                 </span>
               </div>
               <input
@@ -271,22 +271,22 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* ─── Connection ─────────────────────────────────── */}
           <section className="settings-section">
-            <h3 className="settings-section-title">🔌 Bağlantı</h3>
+            <h3 className="settings-section-title">🔌 Connection</h3>
 
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Network port</span>
                 <span className="settings-row-hint">
-                  Değiştir + Apply'a bas → WS server yeni portta yeniden başlar
-                  ve mDNS otomatik re-publish olur. Bağlı agent'lar düşer, mDNS
-                  ile saniyeler içinde tekrar bulur.
+                  Change + click Apply → WS server restarts on the new port and
+                  mDNS auto-republishes. Connected agents disconnect briefly
+                  and re-discover via mDNS within seconds.
                 </span>
                 {portStatus.kind === "applying" && (
-                  <span className="settings-row-status applying">⏳ Yeni portta başlatılıyor…</span>
+                  <span className="settings-row-status applying">⏳ Restarting on new port…</span>
                 )}
                 {portStatus.kind === "success" && (
                   <span className="settings-row-status success">
-                    ✓ Port {portStatus.port} olarak güncellendi
+                    ✓ Port updated to {portStatus.port}
                   </span>
                 )}
                 {portStatus.kind === "error" && (
@@ -329,10 +329,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   disabled={portStatus.kind === "applying" || !portHasChanged}
                   title={
                     !isPortValid
-                      ? "Port 1024–65535 aralığında olmalı"
+                      ? "Port must be between 1024 and 65535"
                       : !portHasChanged
-                      ? "Mevcut port zaten bu"
-                      : "Yeni portta yeniden başlat"
+                      ? "Already on this port"
+                      : "Restart on the new port"
                   }
                 >
                   {portStatus.kind === "applying" ? "…" : "Apply"}
@@ -344,8 +344,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Auto-detect IP (mDNS)</span>
                 <span className="settings-row-hint">
-                  Kapatınca desktop mDNS yayınını durdurur — agent manuel wsUrl kullanmak
-                  zorunda kalır
+                  When off, the desktop stops publishing the mDNS service —
+                  agents must use a manual wsUrl instead
                 </span>
               </div>
               <input
@@ -361,8 +361,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Manuel host:port override</span>
                 <span className="settings-row-hint">
-                  Boş bırakırsan auto-detect kullanılır. Header chip'i de bu değeri gösterir
-                  ve "M" rozeti ile manuel olduğunu işaretler.
+                  Leave empty to use auto-detect. The header chip displays this
+                  value and shows an "M" badge to indicate the manual override.
                 </span>
               </div>
               <input
@@ -384,7 +384,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Network agent enabled</span>
                 <span className="settings-row-hint">
-                  Kapatınca gelen network event'leri yok sayılır
+                  When off, incoming network events are ignored
                 </span>
               </div>
               <input
@@ -400,7 +400,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="settings-row-label">
                 <span>Console agent enabled</span>
                 <span className="settings-row-hint">
-                  Kapatınca gelen console log'ları yok sayılır
+                  When off, incoming console logs are ignored
                 </span>
               </div>
               <input
@@ -415,13 +415,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* ─── UI ─────────────────────────────────────────── */}
           <section className="settings-section">
-            <h3 className="settings-section-title">🎨 Görünüm</h3>
+            <h3 className="settings-section-title">🎨 Appearance</h3>
 
             <label className="settings-row">
               <div className="settings-row-label">
                 <span>Theme</span>
                 <span className="settings-row-hint">
-                  System seçilirse işletim sisteminin görünümünü takip eder
+                  When set to System, follows the operating system appearance
                 </span>
               </div>
               <select
