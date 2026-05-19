@@ -25,36 +25,81 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, updateSettings, resetSettings } = useSettings();
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Network port — kept locally until "Apply" so each keystroke doesn't trigger
-  // a server restart. Resets when the modal is reopened.
-  const [pendingPort, setPendingPort] = useState<number>(settings.connection.port);
+  // Network port — kept as a raw string so the user can type freely (e.g. clear
+  // the field, type "8080" digit by digit) without the value being clamped on
+  // every keystroke. Validation + clamping happens only when Apply is pressed.
+  const [pendingPortInput, setPendingPortInput] = useState<string>(
+    String(settings.connection.port)
+  );
   const [portStatus, setPortStatus] = useState<PortApplyStatus>({ kind: "idle" });
 
-  // Keep pendingPort in sync when settings change from outside (e.g. Reset).
+  // Reset the input when the modal opens or when the persisted port changes
+  // from outside (e.g. Reset to defaults).
   useEffect(() => {
-    setPendingPort(settings.connection.port);
+    setPendingPortInput(String(settings.connection.port));
     setPortStatus({ kind: "idle" });
   }, [settings.connection.port, isOpen]);
 
+  // Derived state — single source of truth for "what would Apply send?"
+  const parsedPort = parseInt(pendingPortInput, 10);
+  const isPortValid =
+    Number.isInteger(parsedPort) && parsedPort >= 1024 && parsedPort <= 65535;
+  const portHasChanged = isPortValid && parsedPort !== settings.connection.port;
+  const portRangeError =
+    pendingPortInput.trim() !== "" && !isPortValid
+      ? "Port 1024–65535 aralığında olmalı"
+      : null;
+
+  // Free-typing buffers for the history inputs. Like the port field, these
+  // store the raw text so partial values like "5" or "" don't snap to the
+  // minimum mid-type. Clamping + commit happens on blur.
+  const [reqHistoryInput, setReqHistoryInput] = useState<string>(
+    String(settings.network.maxRequestHistory)
+  );
+  const [logHistoryInput, setLogHistoryInput] = useState<string>(
+    String(settings.console.maxLogHistory)
+  );
+
+  useEffect(() => {
+    setReqHistoryInput(String(settings.network.maxRequestHistory));
+  }, [settings.network.maxRequestHistory]);
+
+  useEffect(() => {
+    setLogHistoryInput(String(settings.console.maxLogHistory));
+  }, [settings.console.maxLogHistory]);
+
+  const commitHistoryValue = (
+    raw: string,
+    current: number,
+    apply: (n: number) => void
+  ): string => {
+    const parsed = parseInt(raw, 10);
+    if (!Number.isInteger(parsed)) return String(current);
+    const clamped = Math.max(50, Math.min(10000, parsed));
+    apply(clamped);
+    return String(clamped);
+  };
+
   const applyPort = async () => {
-    if (pendingPort === settings.connection.port) return;
+    if (!portHasChanged) return;
     if (!window.electron?.setNetworkPort) {
       setPortStatus({ kind: "error", message: "IPC köprüsü bulunamadı" });
       return;
     }
     setPortStatus({ kind: "applying" });
     try {
-      const result = await window.electron.setNetworkPort(pendingPort);
+      const result = await window.electron.setNetworkPort(parsedPort);
       if (result.ok) {
         updateSettings({ connection: { port: result.port } });
         setPortStatus({ kind: "success", port: result.port });
+        setPendingPortInput(String(result.port));
         // Reset the success indicator after a moment so it doesn't linger.
         setTimeout(() => {
           setPortStatus((s) => (s.kind === "success" ? { kind: "idle" } : s));
         }, 2500);
       } else {
         // Server stayed on the old port; revert the input so the UI matches reality.
-        setPendingPort(result.port);
+        setPendingPortInput(String(result.port));
         setPortStatus({ kind: "error", message: result.error || "Port değiştirilemedi" });
       }
     } catch (err) {
@@ -128,21 +173,25 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <span>Max request history</span>
                 <span className="settings-row-hint">
                   Liste {settings.network.maxRequestHistory} request'i geçince eski kayıtlar
-                  düşer
+                  düşer (50–10000)
                 </span>
               </div>
               <input
                 type="number"
+                inputMode="numeric"
                 min={50}
                 max={10000}
                 step={50}
-                value={settings.network.maxRequestHistory}
-                onChange={(e) =>
-                  updateSettings({
-                    network: {
-                      maxRequestHistory: Math.max(50, Number(e.target.value) || 50),
-                    },
-                  })
+                value={reqHistoryInput}
+                onChange={(e) => setReqHistoryInput(e.target.value)}
+                onBlur={() =>
+                  setReqHistoryInput(
+                    commitHistoryValue(
+                      reqHistoryInput,
+                      settings.network.maxRequestHistory,
+                      (n) => updateSettings({ network: { maxRequestHistory: n } })
+                    )
+                  )
                 }
               />
             </label>
@@ -196,20 +245,25 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <span>Max log history</span>
                 <span className="settings-row-hint">
                   Liste {settings.console.maxLogHistory} log'u geçince eski kayıtlar düşer
+                  (50–10000)
                 </span>
               </div>
               <input
                 type="number"
+                inputMode="numeric"
                 min={50}
                 max={10000}
                 step={50}
-                value={settings.console.maxLogHistory}
-                onChange={(e) =>
-                  updateSettings({
-                    console: {
-                      maxLogHistory: Math.max(50, Number(e.target.value) || 50),
-                    },
-                  })
+                value={logHistoryInput}
+                onChange={(e) => setLogHistoryInput(e.target.value)}
+                onBlur={() =>
+                  setLogHistoryInput(
+                    commitHistoryValue(
+                      logHistoryInput,
+                      settings.console.maxLogHistory,
+                      (n) => updateSettings({ console: { maxLogHistory: n } })
+                    )
+                  )
                 }
               />
             </label>
@@ -240,30 +294,45 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     ✗ {portStatus.message}
                   </span>
                 )}
+                {portRangeError && portStatus.kind === "idle" && (
+                  <span className="settings-row-status error">
+                    ✗ {portRangeError}
+                  </span>
+                )}
               </div>
               <div className="settings-row-port-controls">
                 <input
                   type="number"
+                  inputMode="numeric"
                   min={1024}
                   max={65535}
-                  value={pendingPort}
+                  value={pendingPortInput}
                   disabled={portStatus.kind === "applying"}
                   onChange={(e) => {
-                    const next = Math.max(
-                      1024,
-                      Math.min(65535, Number(e.target.value) || 5051)
-                    );
-                    setPendingPort(next);
+                    // Store raw text — no clamping mid-type. Validation runs
+                    // through `parsedPort` / `isPortValid` for the Apply button.
+                    setPendingPortInput(e.target.value);
                     if (portStatus.kind !== "idle") setPortStatus({ kind: "idle" });
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && portHasChanged) {
+                      e.preventDefault();
+                      applyPort();
+                    }
+                  }}
+                  placeholder="5051"
                 />
                 <button
                   type="button"
                   className="settings-row-apply"
                   onClick={applyPort}
-                  disabled={
-                    portStatus.kind === "applying" ||
-                    pendingPort === settings.connection.port
+                  disabled={portStatus.kind === "applying" || !portHasChanged}
+                  title={
+                    !isPortValid
+                      ? "Port 1024–65535 aralığında olmalı"
+                      : !portHasChanged
+                      ? "Mevcut port zaten bu"
+                      : "Yeni portta yeniden başlat"
                   }
                 >
                   {portStatus.kind === "applying" ? "…" : "Apply"}
