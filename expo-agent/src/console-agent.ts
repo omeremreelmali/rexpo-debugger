@@ -28,15 +28,22 @@ export type ConsoleMessage = {
   stack?: string;
 };
 
+import { discoverDebugger } from "./discovery";
+
 export type ConsoleAgentOptions = {
-  /** WebSocket URL - e.g.: "ws://192.168.1.100:5051" */
-  wsUrl: string;
+  /**
+   * WebSocket URL — e.g. "ws://192.168.1.100:5051".
+   * If omitted, the agent will auto-discover the debugger via mDNS.
+   */
+  wsUrl?: string;
   /** Enable/disable the agent (default: true) */
   enabled?: boolean;
   /** Enable detailed logging (default: false) */
   debug?: boolean;
   /** Capture stack traces for errors (default: true) */
   captureStackTrace?: boolean;
+  /** Auto-discovery timeout in milliseconds (default: 10_000) */
+  discoveryTimeoutMs?: number;
 };
 
 let initialized = false;
@@ -72,29 +79,7 @@ function errorLog(...args: any[]) {
 /**
  * Initializes the console agent and overrides console methods
  */
-export function initConsoleAgent(options: ConsoleAgentOptions) {
-  // @ts-ignore - __DEV__ is defined globally by Expo
-  if (typeof __DEV__ !== "undefined" && !__DEV__) {
-    return;
-  }
-
-  if (initialized) {
-    debugLog("Already initialized");
-    return;
-  }
-
-  const { wsUrl, enabled = true, debug = false, captureStackTrace: capture = true } = options;
-  debugMode = debug;
-  captureStackTrace = capture;
-
-  if (!enabled) {
-    debugLog("Disabled by config");
-    return;
-  }
-
-  initialized = true;
-
-  // Establish WebSocket connection
+function connectSocket(wsUrl: string) {
   try {
     debugLog("🔄 Connecting to inspector:", wsUrl);
     socket = new WebSocket(wsUrl);
@@ -107,13 +92,55 @@ export function initConsoleAgent(options: ConsoleAgentOptions) {
       errorLog("❌ WebSocket error:", e);
     };
 
-    socket.onclose = (e) => {
+    socket.onclose = (_e) => {
       debugLog("🔌 Disconnected from inspector");
       socket = null;
     };
   } catch (error) {
     errorLog("❌ Failed to create WebSocket:", error);
+  }
+}
+
+export function initConsoleAgent(options: ConsoleAgentOptions = {}) {
+  // @ts-ignore - __DEV__ is defined globally by Expo
+  if (typeof __DEV__ !== "undefined" && !__DEV__) {
     return;
+  }
+
+  if (initialized) {
+    debugLog("Already initialized");
+    return;
+  }
+
+  const {
+    wsUrl,
+    enabled = true,
+    debug = false,
+    captureStackTrace: capture = true,
+    discoveryTimeoutMs,
+  } = options;
+  debugMode = debug;
+  captureStackTrace = capture;
+
+  if (!enabled) {
+    debugLog("Disabled by config");
+    return;
+  }
+
+  initialized = true;
+
+  if (wsUrl) {
+    connectSocket(wsUrl);
+  } else {
+    debugLog("🔎 No wsUrl provided — auto-discovering debugger via mDNS");
+    discoverDebugger({ timeoutMs: discoveryTimeoutMs, debug: debugMode })
+      .then((service) => {
+        debugLog(`🎯 Discovered debugger: ${service.name} @ ${service.url}`);
+        connectSocket(service.url);
+      })
+      .catch((err) => {
+        errorLog("❌ Auto-discovery failed:", err?.message || err);
+      });
   }
 
   // Override console methods

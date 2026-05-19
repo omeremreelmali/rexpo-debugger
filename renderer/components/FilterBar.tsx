@@ -1,5 +1,6 @@
 import { useNetwork } from "../state/NetworkContext";
 import { FilterMethod, FilterStatus, FilterLogLevel } from "../types";
+import { ConnectionChip } from "./ConnectionChip";
 import "./FilterBar.css";
 
 export function FilterBar() {
@@ -25,9 +26,7 @@ export function FilterBar() {
     <div className="filter-bar">
       <div className="filter-bar-left">
         <h1 className="app-title">🔍 Rexpo Debugger</h1>
-        <span className="connection-status">
-          WebSocket: <span className="status-active">ws://localhost:5051</span>
-        </span>
+        <ConnectionChip />
       </div>
 
       <div className="filter-bar-center">

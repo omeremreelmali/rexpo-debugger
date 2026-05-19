@@ -59,6 +59,17 @@ export interface ConsoleLog {
   stack?: string;
 }
 
+export interface NetworkInterfaceInfo {
+  name: string;
+  address: string;
+}
+
+export interface ConnectionInfo {
+  interfaces: NetworkInterfaceInfo[];
+  port: number;
+  connectedClients: number;
+}
+
 export type CommandMessage = {
   type: "command";
   command: "replay_request";

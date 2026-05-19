@@ -14,3 +14,7 @@ export type { InitOptions } from "./agent";
 // Console Agent
 export { initConsoleAgent, restoreConsole } from "./console-agent";
 export type { ConsoleAgentOptions, LogLevel, ConsoleMessage } from "./console-agent";
+
+// mDNS auto-discovery (advanced usage)
+export { discoverDebugger, resetDiscoveryCache } from "./discovery";
+export type { DiscoveryOptions, DiscoveredService } from "./discovery";

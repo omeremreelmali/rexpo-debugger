@@ -63,6 +63,17 @@ export type FilterMethod = "ALL" | "GET" | "POST" | "PUT" | "DELETE" | "PATCH" |
 export type FilterStatus = "ALL" | "2xx" | "3xx" | "4xx" | "5xx" | "ERR";
 export type FilterLogLevel = "ALL" | "log" | "warn" | "error" | "info" | "debug";
 
+export interface NetworkInterfaceInfo {
+  name: string;
+  address: string;
+}
+
+export interface ConnectionInfo {
+  interfaces: NetworkInterfaceInfo[];
+  port: number;
+  connectedClients: number;
+}
+
 export type CommandMessage = {
   type: "command";
   command: "replay_request";

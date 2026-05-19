@@ -22,16 +22,6 @@
   margin: 0;
 }
 
-.connection-status {
-  font-size: 12px;
-  color: #cccccc;
-}
-
-.status-active {
-  color: #4ec9b0;
-  font-weight: 500;
-}
-
 .filter-bar-center {
   display: flex;
   align-items: center;

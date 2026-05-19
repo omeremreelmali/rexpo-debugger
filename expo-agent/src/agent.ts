@@ -42,15 +42,24 @@ type NetworkMessage =
     };
 
 export type InitOptions = {
-  /** WebSocket URL - e.g.: "ws://192.168.1.100:5051" */
-  wsUrl: string;
+  /**
+   * WebSocket URL — e.g. "ws://192.168.1.100:5051".
+   * If omitted, the agent will try to auto-discover the debugger over mDNS.
+   * Auto-discovery requires `react-native-zeroconf` to be installed and the
+   * app to be running as a dev build (Expo Go is not supported).
+   */
+  wsUrl?: string;
   /** Enable/disable the agent (default: true) */
   enabled?: boolean;
   /** Maximum body snippet length (default: 3000) */
   maxBodyLength?: number;
   /** Enable detailed logging (default: false) */
   debug?: boolean;
+  /** Auto-discovery timeout in milliseconds (default: 10_000) */
+  discoveryTimeoutMs?: number;
 };
+
+import { discoverDebugger } from "./discovery";
 
 let initialized = false;
 let socket: WebSocket | null = null;
@@ -82,31 +91,10 @@ function errorLog(...args: any[]) {
 }
 
 /**
- * Initializes the network agent and overrides global.fetch
+ * Establishes the WebSocket connection to the desktop inspector.
+ * Called either directly (manual wsUrl) or after mDNS auto-discovery.
  */
-export function initNetworkAgent(options: InitOptions) {
-  // @ts-ignore - __DEV__ is defined globally by Expo
-  if (typeof __DEV__ !== "undefined" && !__DEV__) {
-    return;
-  }
-
-  if (initialized) {
-    debugLog("[NetworkAgent] Already initialized");
-    return;
-  }
-
-  const { wsUrl, enabled = true, debug = false } = options;
-  maxBodyLength = options.maxBodyLength || 3000;
-  debugMode = debug;
-
-  if (!enabled) {
-    debugLog("[NetworkAgent] Disabled by config");
-    return;
-  }
-
-  initialized = true;
-
-  // Establish WebSocket connection
+function connectSocket(wsUrl: string) {
   try {
     debugLog("[NetworkAgent] 🔄 Connecting to inspector:", wsUrl);
     socket = new WebSocket(wsUrl);
@@ -115,7 +103,6 @@ export function initNetworkAgent(options: InitOptions) {
       debugLog("[NetworkAgent] ✅ Connected to inspector:", wsUrl);
       debugLog("[NetworkAgent] 🟢 Socket state: OPEN (readyState: 1)");
 
-      // Health check - check socket status every 10 seconds (only in debug mode)
       if (healthCheckInterval) clearInterval(healthCheckInterval);
       if (debugMode) {
         healthCheckInterval = setInterval(() => {
@@ -132,29 +119,26 @@ export function initNetworkAgent(options: InitOptions) {
 
     socket.onerror = (e) => {
       errorLog("[NetworkAgent] ❌ WebSocket error:", e);
-      debugLog(
-        "[NetworkAgent] 🔍 Current socket state:",
-        socket?.readyState
-      );
+      debugLog("[NetworkAgent] 🔍 Current socket state:", socket?.readyState);
     };
 
     socket.onmessage = (event) => {
       try {
-        let dataStr = typeof event.data === "string" ? event.data : event.data.toString();
+        const dataStr = typeof event.data === "string" ? event.data : event.data.toString();
         const message = JSON.parse(dataStr);
         if (message.type === "command" && message.command === "replay_request") {
           const { url, method, headers, body } = message.payload;
           debugLog(`[NetworkAgent] 🔄 Replaying request: ${method} ${url}`);
-          
+
           const init: any = { method };
           if (headers) init.headers = headers;
           if (body && ["POST", "PUT", "PATCH"].includes(method.toUpperCase())) {
             init.body = body;
           }
-          
+
           if (interceptedFetch) {
-            interceptedFetch(url, init).catch(err => {
-               errorLog("[NetworkAgent] ❌ Replay request failed:", err);
+            interceptedFetch(url, init).catch((err) => {
+              errorLog("[NetworkAgent] ❌ Replay request failed:", err);
             });
           } else {
             errorLog("[NetworkAgent] ❌ Intercepted fetch is not ready yet.");
@@ -175,11 +159,54 @@ export function initNetworkAgent(options: InitOptions) {
       }
 
       socket = null;
-      // Optional: Auto-reconnect logic can be added
     };
   } catch (error) {
     errorLog("[NetworkAgent] ❌ Failed to create WebSocket:", error);
+  }
+}
+
+/**
+ * Initializes the network agent and overrides global.fetch
+ */
+export function initNetworkAgent(options: InitOptions = {}) {
+  // @ts-ignore - __DEV__ is defined globally by Expo
+  if (typeof __DEV__ !== "undefined" && !__DEV__) {
     return;
+  }
+
+  if (initialized) {
+    debugLog("[NetworkAgent] Already initialized");
+    return;
+  }
+
+  const { wsUrl, enabled = true, debug = false, discoveryTimeoutMs } = options;
+  maxBodyLength = options.maxBodyLength || 3000;
+  debugMode = debug;
+
+  if (!enabled) {
+    debugLog("[NetworkAgent] Disabled by config");
+    return;
+  }
+
+  initialized = true;
+
+  // Resolve the WS URL — either user-provided or via mDNS auto-discovery.
+  // We set up interceptors first (below) so requests made during discovery are
+  // queued via safeSend's null-socket guard rather than lost.
+  if (wsUrl) {
+    connectSocket(wsUrl);
+  } else {
+    debugLog("[NetworkAgent] 🔎 No wsUrl provided — auto-discovering debugger via mDNS");
+    discoverDebugger({ timeoutMs: discoveryTimeoutMs, debug: debugMode })
+      .then((service) => {
+        debugLog(
+          `[NetworkAgent] 🎯 Discovered debugger: ${service.name} @ ${service.url}`
+        );
+        connectSocket(service.url);
+      })
+      .catch((err) => {
+        errorLog("[NetworkAgent] ❌ Auto-discovery failed:", err?.message || err);
+      });
   }
 
   // Override global.fetch
