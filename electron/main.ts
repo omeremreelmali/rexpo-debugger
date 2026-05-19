@@ -69,15 +69,28 @@ function interfaceSignature(): string {
 function publishMdnsService() {
   if (!bonjour) return;
 
-  // Tear down existing publication first
-  if (publishedService) {
-    try {
-      publishedService.stop?.();
-    } catch (err) {
-      console.error("[Inspector] Failed to stop previous mDNS service:", err);
-    }
-    publishedService = null;
+  // CRITICAL: Properly unpublish the previous service before re-publishing.
+  //
+  // Service.stop() is typed as optional in bonjour-service and is sometimes
+  // undefined at runtime — using `.stop?.()` was silently a no-op, leaving
+  // the old advertisement on the wire. After a few network changes we'd
+  // accumulate stale services like:
+  //   "Rexpo Debugger on apple-MacBook-Air-4-local"
+  //   "Rexpo Debugger on apple-MacBook-Air-5-local"
+  //   ...
+  // each advertising stale addresses (e.g. a VPN tunnel IP that no longer
+  // exists). Clients (iOS Simulator zeroconf, etc.) would resolve to one of
+  // those stale entries and fail to connect.
+  //
+  // `bonjour.unpublishAll()` is authoritative — it sends "goodbye" packets
+  // for every service this Bonjour instance owns, evicting them from the
+  // network cache. We then publish a single fresh service.
+  try {
+    bonjour.unpublishAll();
+  } catch (err) {
+    console.error("[Inspector] unpublishAll failed (continuing):", err);
   }
+  publishedService = null;
 
   try {
     publishedService = bonjour.publish({

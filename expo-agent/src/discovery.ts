@@ -50,11 +50,51 @@ function buildWsUrl(host: string, port: number): string {
   return `ws://${normalized}:${port}`;
 }
 
-function pickAddress(service: any): string | null {
-  // Prefer IPv4 from the addresses array; fall back to host.
+/**
+ * Picks the most-likely-reachable IPv4 from a discovered service.
+ *
+ * On macOS/Windows it's common to have multiple interfaces advertised over
+ * mDNS — typically Wi-Fi + one or more VPN tunnels (utun*, tap*, Tailscale,
+ * Cisco AnyConnect, ZeroTier, etc.). bonjour-service announces on every
+ * multicast-capable interface, so the resolved service can come back with
+ * addresses like ["10.16.26.54", "192.168.1.172"]. If the agent just grabs
+ * the first one and that's the VPN, the WebSocket connect attempt is
+ * unreachable from the phone's Wi-Fi.
+ *
+ * Heuristic ranking (lower = more likely the real LAN address):
+ *   0  — 192.168.x.x   typical home / SMB Wi-Fi
+ *   1  — 172.16-31.x.x private class B
+ *   2  — 10.x.x.x      private class A (often LAN, sometimes VPN)
+ *   3  — anything else (skipped earlier by the IPv4 regex, but kept for safety)
+ *
+ * If the candidate list is empty, fall back to the mDNS hostname (e.g.
+ * `apple-MacBook-Air.local`) which the OS may resolve to a reachable
+ * interface on its own.
+ */
+function ipv4Rank(addr: string): number {
+  if (/^192\.168\./.test(addr)) return 0;
+  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(addr)) return 1;
+  if (/^10\./.test(addr)) return 2;
+  return 3;
+}
+
+function pickAddress(
+  service: any,
+  log?: (...args: any[]) => void
+): string | null {
   const addrs: string[] = service.addresses || [];
-  const ipv4 = addrs.find((a) => /^\d{1,3}(\.\d{1,3}){3}$/.test(a));
-  if (ipv4) return ipv4;
+  const ipv4 = addrs.filter((a) => /^\d{1,3}(\.\d{1,3}){3}$/.test(a));
+
+  if (ipv4.length > 0) {
+    const ranked = [...ipv4].sort((a, b) => ipv4Rank(a) - ipv4Rank(b));
+    if (log && ipv4.length > 1) {
+      log(
+        `Multiple addresses advertised: ${ipv4.join(", ")} — picking ${ranked[0]}`
+      );
+    }
+    return ranked[0];
+  }
+
   if (addrs.length > 0) return addrs[0];
   return service.host || null;
 }
@@ -128,7 +168,7 @@ export function discoverDebugger(
       if (settled) return;
       log("resolved:", service?.name, service?.host, service?.port, service?.addresses);
 
-      const host = pickAddress(service);
+      const host = pickAddress(service, log);
       if (!host || !service?.port) return;
 
       settled = true;
