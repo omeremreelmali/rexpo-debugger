@@ -55,7 +55,7 @@
   "bugs": {
     "url": "https://github.com/omeremreelmali/rexpo-debugger/issues"
   },
-  "homepage": "https://github.com/omeremreelmali/rexpo-debugger#readme",
+  "homepage": "https://rexpo.redvizor.app",
   "peerDependencies": {
     "react-native": ">=0.60.0",
     "react-native-zeroconf": "^0.14.0"

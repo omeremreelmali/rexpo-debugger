@@ -2,6 +2,7 @@
 
 <div align="center">
 
+[![Website](https://img.shields.io/badge/Website-rexpo.redvizor.app-638eff?style=flat&logo=vercel&logoColor=white)](https://rexpo.redvizor.app)
 [![npm version](https://badge.fury.io/js/rexpo-debugger.svg)](https://www.npmjs.com/package/rexpo-debugger)
 [![Downloads](https://img.shields.io/npm/dm/rexpo-debugger.svg)](https://www.npmjs.com/package/rexpo-debugger)
 [![GitHub release](https://img.shields.io/github/release/omeremreelmali/rexpo-debugger.svg)](https://github.com/omeremreelmali/rexpo-debugger/releases/latest)
@@ -10,6 +11,8 @@
 </div>
 
 A professional debugging tool similar to **Flipper** and **Chrome DevTools** for your Expo and React Native applications. Monitor network traffic **and** console logs in real-time — with **zero-config auto-discovery** so you never hard-code IPs again.
+
+🌐 **[rexpo.redvizor.app](https://rexpo.redvizor.app)** — landing, docs, downloads, FAQ, and full changelog.
 
 <img width="1400" alt="Rexpo Debugger" src="./assets/debug-screenshot.png">
 
