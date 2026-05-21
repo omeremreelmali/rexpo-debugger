@@ -161,11 +161,22 @@ function stopMdns() {
   }
 }
 
+function resolveIconPath(): string {
+  // In dev (tsc output at dist/electron/main.js): ../../assets/<file>
+  // In packaged builds: electron-builder bundles the icon directly via the
+  // build.{mac,win,linux}.icon config, so this runtime path is only used for
+  // the BrowserWindow icon prop (Win/Linux) and app.dock.setIcon (macOS).
+  const file =
+    process.platform === "win32" ? "icon.ico" : "icon.png";
+  return path.join(__dirname, "..", "..", "assets", file);
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     title: "Rexpo Network Inspector",
+    icon: resolveIconPath(),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -405,6 +416,17 @@ function registerIpcHandlers() {
 }
 
 app.whenReady().then(async () => {
+  // macOS shows the dock icon from the packaged .app bundle in production, but
+  // in `npm run dev` it falls back to the Electron framework icon unless we
+  // set it explicitly here.
+  if (process.platform === "darwin" && app.dock) {
+    try {
+      app.dock.setIcon(path.join(__dirname, "..", "..", "assets", "icon.png"));
+    } catch (err) {
+      console.error("[Inspector] Failed to set dock icon:", err);
+    }
+  }
+
   createWindow();
   registerIpcHandlers();
   await startInitialWebSocketServer();
