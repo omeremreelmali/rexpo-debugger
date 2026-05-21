@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-05-21
+
+### 📚 Docs
+
+- **Homepage now points to the new landing site.** The npm `homepage`
+  field (and the README) now point to
+  [rexpo.redvizor.app](https://rexpo.redvizor.app) — the dedicated
+  marketing + docs site — instead of the GitHub README anchor.
+  No code changes.
+
 ## [1.2.1] - 2026-05-20
 
 ### 🐛 Fixed
