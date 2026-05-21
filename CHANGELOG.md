@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-05-20
+
+### 🐛 Fixed
+
+- **Expo config plugin crashed prebuild on Android.** `withRexpoAndroid`
+  assigned the return value of `AndroidConfig.Permissions.ensurePermissions`
+  to `cfg.modResults`. That helper mutates the manifest in place and
+  returns a `{ permission: boolean }` map — not the manifest. The
+  overwrite turned `cfg.modResults` into a boolean map, so every
+  subsequent `android.manifest` mod in the pipeline crashed with:
+
+  ```
+  TypeError: [android.manifest]: withAndroidManifestBaseMod:
+  Cannot read properties of undefined (reading 'hasOwnProperty')
+  ```
+
+  Fix: discard the return value; the in-place mutation is what we want.
+
 ## [1.2.0] - 2026-05-19
 
 A large release focused on **zero-friction connection** between desktop

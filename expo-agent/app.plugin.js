@@ -57,14 +57,18 @@ function withRexpoIos(config, props) {
 
 function withRexpoAndroid(config) {
   return withAndroidManifest(config, (cfg) => {
-    cfg.modResults = AndroidConfig.Permissions.ensurePermissions(
-      cfg.modResults,
-      [
-        "android.permission.ACCESS_WIFI_STATE",
-        "android.permission.CHANGE_WIFI_MULTICAST_STATE",
-        "android.permission.INTERNET",
-      ]
-    );
+    // `ensurePermissions` mutates the manifest in place and returns a
+    // `{ permission: boolean }` map describing what was added — NOT the
+    // manifest itself. Assigning that return value to `cfg.modResults`
+    // overwrites the manifest with a boolean map, which breaks every
+    // subsequent android.manifest mod in the pipeline with:
+    //   TypeError: Cannot read properties of undefined (reading 'hasOwnProperty')
+    // Discard the return value; the mutation is what we want.
+    AndroidConfig.Permissions.ensurePermissions(cfg.modResults, [
+      "android.permission.ACCESS_WIFI_STATE",
+      "android.permission.CHANGE_WIFI_MULTICAST_STATE",
+      "android.permission.INTERNET",
+    ]);
     return cfg;
   });
 }
