@@ -2,7 +2,7 @@
 
 Professional debugging tool for Expo and React Native apps. Inspect network traffic **and** console logs in real-time with Chrome DevTools-like UI.
 
-<img width="1400" alt="Rexpo Debugger Network View" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/debug-screenshot.png">
+<img width="1400" alt="Rexpo Debugger — Network panel" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/screenshots/dark-network.png">
 
 ## ✨ Features
 
@@ -26,7 +26,19 @@ Professional debugging tool for Expo and React Native apps. Inspect network traf
 - ✅ **Expo config plugin** — required iOS/Android permissions are injected automatically; you never edit `Info.plist` or `AndroidManifest.xml`
 - ✅ **Production-safe** — permissions and runtime code are stripped from release builds
 
-<img width="1400" alt="Rexpo Debugger Console View" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/debug-console-screenshot.png">
+## 📸 Take the tour
+
+**Collections** — save any captured request into a named project and replay it whenever you want.
+
+<img width="1400" alt="Collections tab — saved requests grouped by project" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/screenshots/dark-collections.png">
+
+**Console** — every `console.log` / `warn` / `error` / `info` / `debug` with stack traces, level filtering, and rich object formatting.
+
+<img width="1400" alt="Console panel — logs grouped by level with stack traces" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/screenshots/dark-console.png">
+
+**Settings** — persistent preferences for port, history limits, agent toggles, manual host override, mDNS on/off, theme, and more.
+
+<img width="1400" alt="Settings modal — every knob in one place" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/screenshots/dark-settings.png">
 
 ## 🏗️ How It Works
 
