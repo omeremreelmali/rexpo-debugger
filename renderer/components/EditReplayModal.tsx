@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { RequestState } from "../types";
 import { sendReplayCommand } from "../utils/replayRequest";
+import { useCollections } from "../state/CollectionsContext";
+import { useToast } from "./Toast";
+import { SaveRequestModal } from "./SaveRequestModal";
 import "./EditReplayModal.css";
 
 interface EditReplayModalProps {
   request: RequestState;
+  /**
+   * When set, the modal is editing an existing saved request from a
+   * collection. Enables "Save changes" (overwrite) in addition to
+   * "Save as new" and "Send".
+   */
+  savedRequestId?: string;
   onClose: () => void;
 }
 
@@ -109,7 +118,14 @@ function tryPrettyJson(input: string): string {
   }
 }
 
-export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
+export function EditReplayModal({
+  request,
+  savedRequestId,
+  onClose,
+}: EditReplayModalProps) {
+  const { updateRequest } = useCollections();
+  const toast = useToast();
+  const [saveAsOpen, setSaveAsOpen] = useState(false);
   const initialParsed = useMemo(() => parseUrl(request.url), [request.url]);
   const [method, setMethod] = useState(request.method.toUpperCase());
   const [baseUrl, setBaseUrl] = useState(initialParsed.base);
@@ -152,14 +168,15 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
     [method]
   );
 
-  // Close on Esc
+  // Close on Esc — but not while the nested "Save as new" dialog is open
+  // (it owns Esc in that case and closes itself first).
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !saveAsOpen) onClose();
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, [onClose, saveAsOpen]);
 
   const addHeader = () => {
     setHeaders((prev) => [
@@ -213,6 +230,31 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
       headers: rowsToHeaders(headers),
       body: hasBody ? body : undefined,
     });
+    onClose();
+  };
+
+  /** The current form state shaped as a RequestState — used for saving. */
+  const editedRequest = useMemo<RequestState>(
+    () => ({
+      ...request,
+      method,
+      url: resolvedUrl,
+      requestHeaders: rowsToHeaders(headers),
+      requestBodySnippet: hasBody ? body : undefined,
+    }),
+    [request, method, resolvedUrl, headers, hasBody, body]
+  );
+
+  /** Overwrite the existing saved request with the edited values. */
+  const handleOverwrite = () => {
+    if (!savedRequestId) return;
+    updateRequest(savedRequestId, {
+      method,
+      url: resolvedUrl,
+      headers: rowsToHeaders(headers),
+      body: hasBody ? body : undefined,
+    });
+    toast.show("Saved request güncellendi", "success");
     onClose();
   };
 
@@ -442,23 +484,52 @@ export function EditReplayModal({ request, onClose }: EditReplayModalProps) {
           <button className="edit-replay-cancel" onClick={onClose} type="button">
             Cancel
           </button>
-          <button
-            className="edit-replay-send"
-            onClick={handleSend}
-            type="button"
-            disabled={!canSend}
-            title={
-              !canSend
-                ? hasBody && looksLikeJson(body) && !bodyValidation.isJson
-                  ? "JSON body is invalid"
-                  : "URL is empty"
-                : "Send"
-            }
-          >
-            ▶ Send
-          </button>
+          <div className="edit-replay-footer-actions">
+            <button
+              className="edit-replay-save-as"
+              onClick={() => setSaveAsOpen(true)}
+              type="button"
+              disabled={!canSend}
+              title={canSend ? "Save as a new request" : "URL is empty"}
+            >
+              💾 Save as new…
+            </button>
+            {savedRequestId && (
+              <button
+                className="edit-replay-save"
+                onClick={handleOverwrite}
+                type="button"
+                disabled={!canSend}
+                title={canSend ? "Overwrite the saved request" : "URL is empty"}
+              >
+                ✔ Save changes
+              </button>
+            )}
+            <button
+              className="edit-replay-send"
+              onClick={handleSend}
+              type="button"
+              disabled={!canSend}
+              title={
+                !canSend
+                  ? hasBody && looksLikeJson(body) && !bodyValidation.isJson
+                    ? "JSON body is invalid"
+                    : "URL is empty"
+                  : "Send"
+              }
+            >
+              ▶ Send
+            </button>
+          </div>
         </footer>
       </div>
+
+      {saveAsOpen && (
+        <SaveRequestModal
+          source={editedRequest}
+          onClose={() => setSaveAsOpen(false)}
+        />
+      )}
     </div>
   );
 }

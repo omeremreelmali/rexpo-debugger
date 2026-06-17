@@ -37,6 +37,37 @@
   color: var(--text-muted);
 }
 
+.collections-left-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.collections-new-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.collections-new-btn:hover {
+  background: var(--hover-overlay);
+  border-color: var(--accent-hover);
+}
+
+.collections-group-empty {
+  margin: 0;
+  padding: 6px 16px 8px 34px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
 .collections-empty {
   flex: 1;
   display: flex;

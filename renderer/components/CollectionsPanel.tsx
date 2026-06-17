@@ -27,35 +27,50 @@ export function CollectionsPanel() {
     collectionNames,
     deleteRequest,
     moveRequest,
+    createCollection,
+    renameCollection,
+    deleteCollection,
   } = useCollections();
   const toast = useToast();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextState | null>(null);
+  const [groupMenu, setGroupMenu] = useState<{
+    name: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const [editingRequest, setEditingRequest] = useState<SavedRequest | null>(null);
   const [editAndReplayTarget, setEditAndReplayTarget] = useState<SavedRequest | null>(null);
   const [moveDialog, setMoveDialog] = useState<SavedRequest | null>(null);
+  const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<string | null>(null);
 
-  // Group requests by collection name (Uncategorized for unnamed).
+  // Group requests by collection name (Uncategorized for unnamed). First-class
+  // collections with no requests still appear as empty buckets; only the empty
+  // Uncategorized bucket is hidden.
   const grouped = useMemo(() => {
     const groups = new Map<string, SavedRequest[]>();
+    // Seed every known collection so empty first-class buckets show up.
+    for (const name of collectionNames) groups.set(name, []);
     for (const req of state.savedRequests) {
       const key = req.collectionName?.trim() || UNCATEGORIZED_BUCKET;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(req);
     }
-    // Sort: alpha by name, Uncategorized at the end. Use the same order as
-    // collectionNames for consistency, plus any empty buckets.
     const ordered: { name: string; items: SavedRequest[] }[] = [];
     for (const name of collectionNames) {
-      if (groups.has(name)) ordered.push({ name, items: groups.get(name)! });
+      ordered.push({ name, items: groups.get(name) || [] });
     }
     // Catch any group not in collectionNames (shouldn't happen, defensive)
     for (const [name, items] of groups) {
       if (!ordered.some((g) => g.name === name)) ordered.push({ name, items });
     }
-    return ordered;
+    // Hide the Uncategorized bucket when it holds nothing.
+    return ordered.filter(
+      (g) => g.name !== UNCATEGORIZED_BUCKET || g.items.length > 0
+    );
   }, [state.savedRequests, collectionNames]);
 
   const selected = selectedId
@@ -154,18 +169,29 @@ export function CollectionsPanel() {
       <div className="collections-left">
         <header className="collections-left-header">
           <h2>📚 Collections</h2>
-          <span className="collections-left-count">
-            {state.savedRequests.length} saved
-          </span>
+          <div className="collections-left-header-actions">
+            <span className="collections-left-count">
+              {state.savedRequests.length} saved
+            </span>
+            <button
+              className="collections-new-btn"
+              onClick={() => setNewCollectionOpen(true)}
+              title="Create a new collection"
+              type="button"
+            >
+              + New
+            </button>
+          </div>
         </header>
 
-        {state.savedRequests.length === 0 ? (
+        {grouped.length === 0 ? (
           <div className="collections-empty">
             <div className="collections-empty-icon">📚</div>
             <p>No saved requests yet.</p>
             <p className="collections-empty-hint">
               Right-click any request in the Network panel and choose{" "}
-              <strong>Save request…</strong>
+              <strong>Save request…</strong>, or click <strong>+ New</strong> to
+              start a collection.
             </p>
           </div>
         ) : (
@@ -177,6 +203,16 @@ export function CollectionsPanel() {
                   <button
                     className="collections-group-header"
                     onClick={() => toggleCollapse(group.name)}
+                    onContextMenu={(e) => {
+                      if (group.name === UNCATEGORIZED_BUCKET) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setGroupMenu({
+                        name: group.name,
+                        x: e.clientX,
+                        y: e.clientY,
+                      });
+                    }}
                     type="button"
                   >
                     <span className="collections-group-caret">
@@ -189,7 +225,13 @@ export function CollectionsPanel() {
                     </span>
                   </button>
 
-                  {!isCollapsed && (
+                  {!isCollapsed && group.items.length === 0 && (
+                    <p className="collections-group-empty">
+                      Empty — move or save a request here.
+                    </p>
+                  )}
+
+                  {!isCollapsed && group.items.length > 0 && (
                     <ul className="collections-group-items">
                       {group.items.map((req) => (
                         <li
@@ -286,7 +328,65 @@ export function CollectionsPanel() {
       {editAndReplayTarget && (
         <EditReplayModal
           request={toReplayShape(editAndReplayTarget)}
+          savedRequestId={editAndReplayTarget.id}
           onClose={() => setEditAndReplayTarget(null)}
+        />
+      )}
+
+      {groupMenu && (
+        <ContextMenu
+          items={[
+            {
+              id: "rename-collection",
+              icon: "✏️",
+              label: "Rename collection…",
+              onClick: () => setRenameTarget(groupMenu.name),
+            },
+            {
+              id: "delete-collection",
+              icon: "🗑",
+              label: "Delete collection",
+              destructive: true,
+              onClick: () => {
+                deleteCollection(groupMenu.name);
+                toast.show(
+                  `"${groupMenu.name}" silindi — istekler Uncategorized'a taşındı`,
+                  "info"
+                );
+              },
+            },
+          ]}
+          position={{ x: groupMenu.x, y: groupMenu.y }}
+          onClose={() => setGroupMenu(null)}
+        />
+      )}
+
+      {newCollectionOpen && (
+        <CollectionNameDialog
+          title="New collection"
+          confirmLabel="Create"
+          existingNames={collectionNames}
+          onCancel={() => setNewCollectionOpen(false)}
+          onConfirm={(name) => {
+            createCollection(name);
+            toast.show(`Collection "${name}" oluşturuldu`, "success");
+            setNewCollectionOpen(false);
+          }}
+        />
+      )}
+
+      {renameTarget && (
+        <CollectionNameDialog
+          title="Rename collection"
+          confirmLabel="Rename"
+          initialValue={renameTarget}
+          existingNames={collectionNames.filter((n) => n !== renameTarget)}
+          onCancel={() => setRenameTarget(null)}
+          onConfirm={(name) => {
+            renameCollection(renameTarget, name);
+            toast.show(`Renamed to "${name}"`, "success");
+            setRenameTarget(null);
+          }}
         />
       )}
 
@@ -530,6 +630,97 @@ function MoveCollectionDialog({
               type="button"
             >
               Move
+            </button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+interface CollectionNameDialogProps {
+  title: string;
+  confirmLabel: string;
+  initialValue?: string;
+  existingNames: string[];
+  onCancel: () => void;
+  onConfirm: (name: string) => void;
+}
+
+/** Small single-field dialog for creating or renaming a collection. */
+function CollectionNameDialog({
+  title,
+  confirmLabel,
+  initialValue = "",
+  existingNames,
+  onCancel,
+  onConfirm,
+}: CollectionNameDialogProps) {
+  const [value, setValue] = useState(initialValue);
+  const trimmed = value.trim();
+  const isDuplicate = existingNames.some(
+    (n) => n.toLowerCase() === trimmed.toLowerCase()
+  );
+  const canConfirm = trimmed.length > 0 && !isDuplicate;
+
+  const submit = () => {
+    if (canConfirm) onConfirm(trimmed);
+  };
+
+  return (
+    <div className="save-request-backdrop" onClick={onCancel}>
+      <div
+        className="save-request-modal"
+        style={{ width: "min(420px, 92vw)" }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        <header className="save-request-header">
+          <h2>{title}</h2>
+          <button
+            className="save-request-close"
+            onClick={onCancel}
+            type="button"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </header>
+        <div className="save-request-body">
+          <label className="save-request-field">
+            <span className="save-request-label">Collection name</span>
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+                if (e.key === "Escape") onCancel();
+              }}
+              placeholder="e.g. Auth flows"
+              autoFocus
+            />
+            {isDuplicate && (
+              <span className="save-request-optional" style={{ color: "#e06c75" }}>
+                A collection with this name already exists.
+              </span>
+            )}
+          </label>
+        </div>
+        <footer className="save-request-footer">
+          <span className="save-request-hint" />
+          <div className="save-request-footer-actions">
+            <button className="save-request-cancel" onClick={onCancel} type="button">
+              Cancel
+            </button>
+            <button
+              className="save-request-confirm"
+              onClick={submit}
+              type="button"
+              disabled={!canConfirm}
+            >
+              {confirmLabel}
             </button>
           </div>
         </footer>

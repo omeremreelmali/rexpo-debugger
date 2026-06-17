@@ -235,6 +235,11 @@
   font-weight: 600;
 }
 
-.save-request-confirm:hover {
+.save-request-confirm:hover:not(:disabled) {
   background: var(--accent-hover);
+}
+
+.save-request-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
