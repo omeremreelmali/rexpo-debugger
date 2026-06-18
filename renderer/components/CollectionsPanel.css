@@ -68,6 +68,26 @@
   color: var(--text-muted);
 }
 
+/* Drag & drop between collections */
+.collections-group {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.collections-group.drag-over {
+  background: var(--hover-overlay);
+  border-color: var(--accent-hover, #0e639c);
+}
+
+.collections-item {
+  cursor: grab;
+}
+
+.collections-item.dragging {
+  opacity: 0.45;
+}
+
 .collections-empty {
   flex: 1;
   display: flex;

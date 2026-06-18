@@ -1,0 +1,43 @@
+.import-curl-input {
+  font-family: var(--mono-font, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+.import-curl-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #e06c75;
+}
+
+.import-curl-preview {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--hover-overlay);
+}
+
+.import-curl-preview-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.import-curl-preview-url {
+  font-family: var(--mono-font, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.import-curl-preview-meta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}

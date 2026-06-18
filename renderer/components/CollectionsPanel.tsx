@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type DragEvent } from "react";
 import {
   defaultRequestLabel,
   SavedRequest,
@@ -8,11 +8,16 @@ import {
 import { ContextMenu, ContextMenuItem } from "./ContextMenu";
 import { EditReplayModal } from "./EditReplayModal";
 import { SaveRequestModal } from "./SaveRequestModal";
+import { ImportCurlModal } from "./ImportCurlModal";
 import { useToast } from "./Toast";
 import { copyToClipboard, generateCurlCommand } from "../utils/curlGenerator";
+import { ParsedCurlRequest } from "../utils/curlParser";
 import { replayRequest } from "../utils/replayRequest";
 import { RequestState } from "../types";
 import "./CollectionsPanel.css";
+
+/** A drag payload key used by the collections drag & drop. */
+const DRAG_MIME = "application/x-rexpo-saved-request";
 
 type ContextState = { request: SavedRequest; x: number; y: number };
 
@@ -46,6 +51,13 @@ export function CollectionsPanel() {
   const [moveDialog, setMoveDialog] = useState<SavedRequest | null>(null);
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<string | null>(null);
+  const [importCurlOpen, setImportCurlOpen] = useState(false);
+  const [curlImportSource, setCurlImportSource] = useState<RequestState | null>(
+    null
+  );
+  // Drag & drop: which request is being dragged, which group is hovered.
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
 
   // Group requests by collection name (Uncategorized for unnamed). First-class
   // collections with no requests still appear as empty buckets; only the empty
@@ -115,6 +127,39 @@ export function CollectionsPanel() {
     toast.show("Saved request silindi", "info");
   };
 
+  /** Turn a parsed cURL command into a draft request, then open Save. */
+  const handleCurlParsed = (parsed: ParsedCurlRequest) => {
+    setCurlImportSource({
+      id: `curl-${Date.now()}`,
+      url: parsed.url,
+      method: parsed.method,
+      requestHeaders:
+        Object.keys(parsed.headers).length > 0 ? parsed.headers : undefined,
+      requestBodySnippet: parsed.body,
+      startedAt: new Date().toISOString(),
+    });
+    setImportCurlOpen(false);
+  };
+
+  /** Drop a dragged request onto a collection group. */
+  const handleDropOnGroup = (e: DragEvent, groupName: string) => {
+    e.preventDefault();
+    setDragOverGroup(null);
+    setDraggingId(null);
+    const id = e.dataTransfer.getData(DRAG_MIME) || e.dataTransfer.getData("text/plain");
+    if (!id) return;
+    const req = state.savedRequests.find((r) => r.id === id);
+    if (!req) return;
+    const target = groupName === UNCATEGORIZED_BUCKET ? undefined : groupName;
+    const current = req.collectionName?.trim() || undefined;
+    if (current === target) return; // already here — no-op
+    moveRequest(id, target);
+    toast.show(
+      target ? `Moved to ${target}` : "Moved to Uncategorized",
+      "success"
+    );
+  };
+
   const buildContextMenu = (req: SavedRequest): ContextMenuItem[] => [
     {
       id: "replay",
@@ -175,6 +220,14 @@ export function CollectionsPanel() {
             </span>
             <button
               className="collections-new-btn"
+              onClick={() => setImportCurlOpen(true)}
+              title="Import a request from a cURL command"
+              type="button"
+            >
+              ⤓ cURL
+            </button>
+            <button
+              className="collections-new-btn"
               onClick={() => setNewCollectionOpen(true)}
               title="Create a new collection"
               type="button"
@@ -199,7 +252,25 @@ export function CollectionsPanel() {
             {grouped.map((group) => {
               const isCollapsed = collapsed.has(group.name);
               return (
-                <div key={group.name} className="collections-group">
+                <div
+                  key={group.name}
+                  className={`collections-group ${
+                    dragOverGroup === group.name ? "drag-over" : ""
+                  }`}
+                  onDragOver={(e) => {
+                    if (!draggingId) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    if (dragOverGroup !== group.name) setDragOverGroup(group.name);
+                  }}
+                  onDragLeave={(e) => {
+                    // Only clear when leaving the group entirely.
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      setDragOverGroup((g) => (g === group.name ? null : g));
+                    }
+                  }}
+                  onDrop={(e) => handleDropOnGroup(e, group.name)}
+                >
                   <button
                     className="collections-group-header"
                     onClick={() => toggleCollapse(group.name)}
@@ -238,7 +309,18 @@ export function CollectionsPanel() {
                           key={req.id}
                           className={`collections-item ${
                             selectedId === req.id ? "selected" : ""
-                          }`}
+                          } ${draggingId === req.id ? "dragging" : ""}`}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData(DRAG_MIME, req.id);
+                            e.dataTransfer.setData("text/plain", req.id);
+                            e.dataTransfer.effectAllowed = "move";
+                            setDraggingId(req.id);
+                          }}
+                          onDragEnd={() => {
+                            setDraggingId(null);
+                            setDragOverGroup(null);
+                          }}
                           onClick={() => setSelectedId(req.id)}
                           onContextMenu={(e) => {
                             e.preventDefault();
@@ -387,6 +469,20 @@ export function CollectionsPanel() {
             toast.show(`Renamed to "${name}"`, "success");
             setRenameTarget(null);
           }}
+        />
+      )}
+
+      {importCurlOpen && (
+        <ImportCurlModal
+          onCancel={() => setImportCurlOpen(false)}
+          onParsed={handleCurlParsed}
+        />
+      )}
+
+      {curlImportSource && (
+        <SaveRequestModal
+          source={curlImportSource}
+          onClose={() => setCurlImportSource(null)}
         />
       )}
 
