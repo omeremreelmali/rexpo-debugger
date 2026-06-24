@@ -390,6 +390,56 @@ export async function sendInitialBurst(send) {
     "Performance mark",
     { metric: "TTI", value: 1247, unit: "ms", target: 1500 },
   ]);
+
+  // 14. State stores — populate the State tab (Redux / Zustand / custom).
+  await sleep(60);
+  sendStateSnapshots(send);
+}
+
+/** Demo store snapshots for the State tab screenshot. */
+export function sendStateSnapshots(send) {
+  const at = new Date().toISOString();
+  const snap = (storeId, name, lib, state, canSet = true) =>
+    send({ type: "state", storeId, name, lib, state, canSet, at });
+
+  snap("auth", "auth", "zustand", {
+    user: {
+      id: 42,
+      name: "Ada Lovelace",
+      email: "demo@rexpo.dev",
+      role: "admin",
+      avatar: "https://i.pravatar.cc/150?u=42",
+    },
+    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…",
+    isAuthenticated: true,
+    expiresAt: "2026-06-25T13:45:00.000Z",
+    login: { __rexpo: "function", name: "login" },
+    logout: { __rexpo: "function", name: "logout" },
+  });
+
+  snap("cart", "cart", "zustand", {
+    items: [
+      { id: "sku_204", title: "Mechanical Keyboard", qty: 1, price: 129.0 },
+      { id: "sku_881", title: "USB-C Hub", qty: 2, price: 39.5 },
+    ],
+    count: 3,
+    subtotal: 208.0,
+    currency: "USD",
+    coupon: null,
+    addItem: { __rexpo: "function", name: "addItem" },
+  });
+
+  snap(
+    "app",
+    "app",
+    "redux",
+    {
+      ui: { theme: "system", sidebarOpen: true, activeTab: "home" },
+      flags: { betaCheckout: true, newPricing: false },
+      network: { online: true, lastSyncAt: "2026-06-25T13:02:11.000Z" },
+    },
+    false
+  );
 }
 
 // A small, hand-crafted set of saved requests so the Collections tab looks

@@ -338,7 +338,15 @@ async function captureForTheme(cdp, theme) {
   await sleep(400);
   await cdp.screenshot(resolve(OUT_DIR, `${theme}-collections.png`));
 
+  // 3b. State tab — stores arrive via the fake agent burst; StatePanel
+  // auto-selects the first store so the JSON tree is populated.
+  await clickTab(cdp, "state");
+  await sleep(600);
+  await cdp.screenshot(resolve(OUT_DIR, `${theme}-state.png`));
+
   // 4. Settings modal — opened on top of whichever tab is active.
+  await clickTab(cdp, "network");
+  await sleep(150);
   await openSettings(cdp);
   await sleep(500);
   await cdp.screenshot(resolve(OUT_DIR, `${theme}-settings.png`));
