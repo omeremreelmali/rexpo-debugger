@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { NetworkProvider, useNetwork } from "./state/NetworkContext";
 import { SettingsProvider, useSettings } from "./state/SettingsContext";
 import { CollectionsProvider, useCollections } from "./state/CollectionsContext";
+import { StateProvider, useStores } from "./state/StateContext";
 import { ToastProvider } from "./components/Toast";
 import { FilterBar } from "./components/FilterBar";
 import { NetworkTable } from "./components/NetworkTable";
@@ -9,6 +10,7 @@ import { RequestDetails } from "./components/RequestDetails";
 import { ConsoleTable } from "./components/ConsoleTable";
 import { ConsoleDetails } from "./components/ConsoleDetails";
 import { CollectionsPanel } from "./components/CollectionsPanel";
+import { StatePanel } from "./components/StatePanel";
 import "./App.css";
 
 const PANEL_WIDTH_STORAGE_KEY = "rexpo-debugger-panel-width";
@@ -186,11 +188,17 @@ function AppContent() {
           isActive={state.activeTab === "collections"}
           onClick={() => dispatch({ type: "SET_ACTIVE_TAB", payload: "collections" })}
         />
+        <StateTabButton
+          isActive={state.activeTab === "state"}
+          onClick={() => dispatch({ type: "SET_ACTIVE_TAB", payload: "state" })}
+        />
       </div>
 
       {/* Main Content */}
       {state.activeTab === "collections" ? (
         <CollectionsPanel />
+      ) : state.activeTab === "state" ? (
+        <StatePanel />
       ) : (
         <div className="main-content" ref={mainContentRef}>
           <div
@@ -238,14 +246,37 @@ function CollectionsTabButton({
   );
 }
 
+function StateTabButton({
+  isActive,
+  onClick,
+}: {
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const { stores } = useStores();
+  return (
+    <button
+      className={`tab-button ${isActive ? "active" : ""}`}
+      onClick={onClick}
+      type="button"
+    >
+      <span className="tab-icon">🧩</span>
+      State
+      {stores.length > 0 && <span className="tab-count">{stores.length}</span>}
+    </button>
+  );
+}
+
 export function App() {
   return (
     <SettingsProvider>
       <ToastProvider>
         <CollectionsProvider>
-          <NetworkProvider>
-            <AppContent />
-          </NetworkProvider>
+          <StateProvider>
+            <NetworkProvider>
+              <AppContent />
+            </NetworkProvider>
+          </StateProvider>
         </CollectionsProvider>
       </ToastProvider>
     </SettingsProvider>

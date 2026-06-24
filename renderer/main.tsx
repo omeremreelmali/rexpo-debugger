@@ -31,6 +31,8 @@ declare global {
       removeConnectionStateListener: () => void;
       onSessionStarted: (callback: () => void) => void;
       removeSessionStartedListener: () => void;
+      onStateMessage: (callback: (message: any) => void) => void;
+      removeStateMessageListener: () => void;
     };
   }
 }

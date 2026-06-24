@@ -4,7 +4,7 @@ import * as os from "os";
 import * as fs from "fs";
 import { WebSocketServer, WebSocket } from "ws";
 import { Bonjour, Service } from "bonjour-service";
-import { NetworkMessage, CommandMessage, ConnectionInfo, NetworkInterfaceInfo } from "./types";
+import { CommandMessage, ConnectionInfo, NetworkInterfaceInfo } from "./types";
 
 const DEFAULT_WS_PORT = 5051;
 const MDNS_SERVICE_TYPE = "rexpo";
@@ -216,11 +216,16 @@ function attachWebSocketListeners(server: WebSocketServer) {
 
     ws.on("message", (data: Buffer) => {
       try {
-        const message = JSON.parse(data.toString()) as NetworkMessage;
+        const message = JSON.parse(data.toString()) as { type?: string };
 
-        // Forward message to renderer
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send("network-message", message);
+          // State snapshots ride a dedicated channel so the network reducer
+          // never sees them; everything else stays on "network-message".
+          if (message?.type === "state") {
+            mainWindow.webContents.send("state-message", message);
+          } else {
+            mainWindow.webContents.send("network-message", message);
+          }
         }
       } catch (error) {
         console.error("[Inspector] Failed to parse message:", error);

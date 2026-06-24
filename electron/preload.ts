@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { NetworkMessage, CommandMessage, ConnectionInfo } from "./types";
+import {
+  NetworkMessage,
+  CommandMessage,
+  ConnectionInfo,
+  StateMessage,
+} from "./types";
 
 // Expose protected methods to renderer process
 contextBridge.exposeInMainWorld("electron", {
@@ -47,6 +52,14 @@ contextBridge.exposeInMainWorld("electron", {
   removeSessionStartedListener: () => {
     ipcRenderer.removeAllListeners("session-started");
   },
+  onStateMessage: (callback: (message: StateMessage) => void) => {
+    ipcRenderer.on("state-message", (_event, message: StateMessage) => {
+      callback(message);
+    });
+  },
+  removeStateMessageListener: () => {
+    ipcRenderer.removeAllListeners("state-message");
+  },
 });
 
 // Type definition for window.electron
@@ -74,6 +87,8 @@ export interface ElectronAPI {
   removeConnectionStateListener: () => void;
   onSessionStarted: (callback: () => void) => void;
   removeSessionStartedListener: () => void;
+  onStateMessage: (callback: (message: StateMessage) => void) => void;
+  removeStateMessageListener: () => void;
 }
 
 declare global {

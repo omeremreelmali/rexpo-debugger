@@ -59,6 +59,27 @@ export interface ConsoleLog {
   stack?: string;
 }
 
+/** A state-store snapshot pushed by the agent's state inspector. */
+export interface StateMessage {
+  type: "state";
+  storeId: string;
+  name: string;
+  lib: "redux" | "zustand" | "custom";
+  state: any;
+  canSet: boolean;
+  at: string;
+}
+
+/** Renderer-side view of a tracked store (latest snapshot). */
+export interface StoreSnapshot {
+  storeId: string;
+  name: string;
+  lib: "redux" | "zustand" | "custom";
+  state: any;
+  canSet: boolean;
+  at: string;
+}
+
 export interface NetworkInterfaceInfo {
   name: string;
   address: string;

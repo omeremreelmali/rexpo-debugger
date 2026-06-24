@@ -18,6 +18,13 @@ Professional debugging tool for Expo and React Native apps. Inspect network traf
 - ✅ **Stack traces** for errors and warnings
 - ✅ **Rich formatting** (objects, arrays, errors, dates, etc.)
 
+### State Inspection (NEW! 🎉)
+
+- ✅ **View store values live** — stream Redux, Zustand, or any store to the desktop "State" tab
+- ✅ **Generic adapter** — `attachStore({ getState, subscribe })` works with Valtio, MobX, Jotai, XState, Effector, and more
+- ✅ **Safe serialization** — functions, Maps/Sets, Dates and circular refs are tagged, never crash the bridge
+- ℹ️ View-only for now; write-back is on the roadmap (the wire format already carries a `canSet` flag)
+
 ### Zero-config Auto-Discovery (NEW! 🎉)
 
 - ✅ **No more hardcoded IPs** — the agent finds the desktop debugger over your local Wi-Fi automatically via mDNS / Bonjour
@@ -206,9 +213,37 @@ initConsoleAgent({
 });
 ```
 
+### `initStateAgent(options)` + attaching stores
+
+Stream your state-management stores to the desktop **State** tab.
+
+```typescript
+import {
+  initStateAgent,
+  attachZustandStore,
+  attachReduxStore,
+  attachStore,
+} from "rexpo-debugger";
+
+if (__DEV__) {
+  initStateAgent();                              // auto-discovers the debugger
+  attachZustandStore(useBearStore, { name: "bears" });   // Zustand hook from create(...)
+  attachReduxStore(store, { name: "app" });              // Redux / Redux Toolkit
+
+  // Anything else, via the generic adapter (Valtio shown):
+  attachStore({
+    name: "valtio",
+    getState: () => snapshot(state),
+    subscribe: (cb) => subscribe(state, cb),     // returns an unsubscribe fn
+  });
+}
+```
+
+`initStateAgent` options: `wsUrl?`, `enabled?`, `debug?`, `discoveryTimeoutMs?`, `throttleMs?` (min gap between snapshots per store, default 150). Each `attach*` call returns a detach function. Works with any store exposing `getState` + `subscribe` (Valtio, MobX, Jotai, XState, Effector…). Plain React Context / `useReducer` and Recoil aren't supported (no global store to snapshot).
+
 ### Debug mode
 
-The agent runs silently by default and only logs critical failures. Set `debug: true` on either agent to see verbose output (discovery, connection, request/response capture, axios interceptor setup, periodic health checks, **reconnect attempts**).
+The agent runs silently by default and only logs critical failures. Set `debug: true` on any agent to see verbose output (discovery, connection, request/response capture, axios interceptor setup, periodic health checks, **reconnect attempts**).
 
 ## 🔁 Auto-Reconnect
 

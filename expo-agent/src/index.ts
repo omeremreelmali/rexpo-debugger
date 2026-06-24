@@ -15,6 +15,20 @@ export type { InitOptions } from "./agent";
 export { initConsoleAgent, restoreConsole } from "./console-agent";
 export type { ConsoleAgentOptions, LogLevel, ConsoleMessage } from "./console-agent";
 
+// State Agent (Redux / Zustand / custom store inspection)
+export {
+  initStateAgent,
+  attachStore,
+  attachReduxStore,
+  attachZustandStore,
+  stopStateAgent,
+} from "./state-agent";
+export type {
+  StateAgentOptions,
+  StoreAdapter,
+  StateMessage,
+} from "./state-agent";
+
 // mDNS auto-discovery (advanced usage)
 export { discoverDebugger, resetDiscoveryCache } from "./discovery";
 export type { DiscoveryOptions, DiscoveredService } from "./discovery";
