@@ -1,7 +1,31 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { useSettings } from "../state/SettingsContext";
+import { consoleLogToText } from "../utils/consoleFormat";
+import { copyToClipboard } from "../utils/curlGenerator";
 import "./ConsoleTable.css";
+
+/** Hover-revealed per-row copy button — copies the clean message text. */
+function RowCopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="console-row-copy"
+      title="Copy message (clean text)"
+      onClick={async (e) => {
+        e.stopPropagation();
+        const ok = await copyToClipboard(text);
+        if (ok) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1000);
+        }
+      }}
+    >
+      {copied ? "✓" : "⧉"}
+    </button>
+  );
+}
 
 export function ConsoleTable() {
   const { state, dispatch } = useNetwork();
@@ -69,6 +93,7 @@ export function ConsoleTable() {
               <div className="console-cell timestamp">
                 {formatTime(log.timestamp)}
               </div>
+              <RowCopyButton text={consoleLogToText(log)} />
             </div>
           ))
         )}

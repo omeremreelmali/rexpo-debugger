@@ -1,7 +1,31 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { JsonViewer, TextViewer } from "./JsonViewer";
+import { copyToClipboard } from "../utils/curlGenerator";
+import { consoleLogToText, formatConsoleArg } from "../utils/consoleFormat";
 import "./ConsoleDetails.css";
+
+/** Small inline button that copies plain text and flashes "Copied". */
+function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="console-copy-btn"
+      onClick={async (e) => {
+        e.stopPropagation();
+        const ok = await copyToClipboard(text);
+        if (ok) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1200);
+        }
+      }}
+      title={`${label} (clean text)`}
+    >
+      {copied ? "✓ Copied" : `⧉ ${label}`}
+    </button>
+  );
+}
 
 export function ConsoleDetails() {
   const { state } = useNetwork();
@@ -32,12 +56,16 @@ export function ConsoleDetails() {
             {formatTimestamp(selectedLog.timestamp)}
           </span>
         </div>
+        <CopyButton text={consoleLogToText(selectedLog)} label="Copy message" />
       </div>
 
       <div className="console-details-body">
         {/* Arguments */}
         <div className="console-details-section">
-          <div className="console-details-section-title">Message</div>
+          <div className="console-details-section-title">
+            <span>Message</span>
+            <CopyButton text={consoleLogToText(selectedLog)} />
+          </div>
           <div className="console-details-section-content">
             {selectedLog.args.map((arg, index) => (
               <div key={index} className="console-arg">
@@ -46,7 +74,7 @@ export function ConsoleDetails() {
                   {isJsonLike(arg) ? (
                     <JsonViewer data={JSON.stringify(arg)} />
                   ) : (
-                    <TextViewer data={formatArgument(arg)} />
+                    <TextViewer data={formatConsoleArg(arg)} />
                   )}
                 </div>
               </div>
@@ -57,7 +85,10 @@ export function ConsoleDetails() {
         {/* Stack trace (for errors/warnings) */}
         {selectedLog.stack && (
           <div className="console-details-section">
-            <div className="console-details-section-title">Stack Trace</div>
+            <div className="console-details-section-title">
+              <span>Stack Trace</span>
+              <CopyButton text={selectedLog.stack} />
+            </div>
             <div className="console-details-section-content">
               <pre className="console-stack">{selectedLog.stack}</pre>
             </div>
@@ -66,7 +97,10 @@ export function ConsoleDetails() {
 
         {/* Raw data */}
         <div className="console-details-section">
-          <div className="console-details-section-title">Raw Data</div>
+          <div className="console-details-section-title">
+            <span>Raw Data</span>
+            <CopyButton text={JSON.stringify(selectedLog, null, 2)} label="Copy JSON" />
+          </div>
           <div className="console-details-section-content">
             <JsonViewer data={JSON.stringify(selectedLog)} />
           </div>
@@ -93,38 +127,4 @@ function isJsonLike(arg: any): boolean {
   if (!arg || typeof arg !== "object") return false;
   if (arg.__type) return false; // Special types
   return true;
-}
-
-function formatArgument(arg: any): string {
-  if (arg === null) return "null";
-  if (arg === undefined) return "undefined";
-  if (typeof arg === "string") return arg;
-  if (typeof arg === "number" || typeof arg === "boolean") {
-    return String(arg);
-  }
-
-  // Handle special serialized types
-  if (arg && typeof arg === "object") {
-    if (arg.__type === "Error") {
-      return `${arg.name}: ${arg.message}\n${arg.stack || ""}`;
-    }
-    if (arg.__type === "Date") {
-      return arg.value;
-    }
-    if (arg.__type === "RegExp") {
-      return arg.value;
-    }
-    if (arg.__type === "Function") {
-      return arg.value;
-    }
-
-    // Regular object or array
-    try {
-      return JSON.stringify(arg, null, 2);
-    } catch {
-      return "[Circular or Unserializable Object]";
-    }
-  }
-
-  return String(arg);
 }

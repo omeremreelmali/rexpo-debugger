@@ -45,11 +45,42 @@
 
 .console-row {
   display: flex;
+  position: relative;
   border-bottom: 1px solid var(--border-muted);
   cursor: pointer;
   transition: background-color 0.1s ease;
   font-size: 13px;
   font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.console-row-copy {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--elevated-bg, var(--panel-bg));
+  color: var(--text-secondary, var(--text-primary));
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.console-row:hover .console-row-copy {
+  opacity: 1;
+}
+
+.console-row-copy:hover {
+  background: var(--hover-overlay);
+  border-color: var(--accent-hover, #0e639c);
+  color: var(--text-primary);
 }
 
 .console-row:hover {
