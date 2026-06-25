@@ -361,13 +361,30 @@ export function initStateAgent(options: StateAgentOptions = {}): void {
 /**
  * Attach any store via a generic adapter. Returns a detach function.
  */
+function slugify(s: string): string {
+  return (
+    s
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "store"
+  );
+}
+
 export function attachStore(adapter: StoreAdapter): () => void {
   if (!initialized) {
     debugLog("attachStore called before initStateAgent — call init first.");
   }
-  const storeId = `store-${++storeCounter}`;
-  const name = adapter.name?.trim() || `store ${storeCounter}`;
+  const name = adapter.name?.trim() || `store ${storeCounter + 1}`;
   const lib = adapter.lib ?? "custom";
+  // Stable id derived from the name, so a re-attach (Fast Refresh, remount,
+  // reconnect) overwrites the existing entry instead of duplicating it.
+  const storeId = adapter.name?.trim()
+    ? `s:${slugify(adapter.name)}`
+    : `store-${++storeCounter}`;
+
+  // Replace any existing registration with the same id (unsubscribe the old).
+  if (stores.has(storeId)) detachStore(storeId);
 
   const onChange = () => scheduleSnapshot(storeId);
   let unsubscribe = () => {};
