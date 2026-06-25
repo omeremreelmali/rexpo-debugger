@@ -143,20 +143,20 @@
   font-size: 11px;
 }
 
-/* ── Right: details + tree ──────────────────────────────────────── */
-.state-right {
+/* ── Center (tree) + Right (history) ────────────────────────────── */
+.state-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.store-pane {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-}
-
-.store-details {
-  display: flex;
-  flex-direction: column;
   min-height: 0;
-  flex: 1;
 }
 
 .store-details-header {
@@ -180,9 +180,116 @@
   color: var(--text-primary);
 }
 
-.store-details-updated {
+.store-live-badge {
   font-size: 11px;
+  font-weight: 600;
+  color: #4ec9a0;
+}
+
+.store-backtolive {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.store-backtolive:hover {
+  background: var(--hover-overlay);
+  border-color: var(--accent-hover, #0e639c);
+}
+
+.state-store-count {
+  font-size: 10px;
+  min-width: 16px;
+  text-align: center;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: var(--hover-overlay);
   color: var(--text-muted);
+}
+
+.state-store-item.selected .state-store-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* History timeline (right) */
+.state-history {
+  width: 184px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--panel-bg);
+  overflow: hidden;
+}
+
+.state-history-header {
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.state-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.state-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--mono-font, ui-monospace, SFMono-Regular, Menlo, monospace);
+  color: var(--text-secondary, var(--text-primary));
+}
+
+.state-history-item:hover {
+  background: var(--hover-overlay);
+}
+
+.state-history-item.active {
+  background: var(--accent-hover, #0e639c);
+  color: #fff;
+}
+
+.state-history-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.state-history-item.active .state-history-dot {
+  background: #fff;
+}
+
+.state-history-time {
+  flex: 1;
+}
+
+.state-history-live {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #4ec9a0;
+}
+
+.state-history-item.active .state-history-live {
+  color: #d7ffe9;
 }
 
 .store-search-row {

@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { StoreSnapshot, useStores } from "../state/StateContext";
+import { useEffect, useState } from "react";
+import { StoreEntry, useStores } from "../state/StateContext";
 import "./StatePanel.css";
 
 /**
- * State Inspector tab — left: list of tracked stores; right: a collapsible,
- * searchable JSON tree of the selected store's latest snapshot. View-only.
+ * State Inspector tab — three panes: store list (left), JSON tree of the
+ * viewed snapshot (center), and a timestamped history timeline (right) you can
+ * scrub through like a commit log. View-only.
  */
 export function StatePanel() {
   const { stores, clear } = useStores();
@@ -26,7 +27,7 @@ export function StatePanel() {
               className="state-clear-btn"
               onClick={clear}
               type="button"
-              title="Clear the store list"
+              title="Clear all stores and history"
             >
               Clear
             </button>
@@ -55,9 +56,9 @@ export function StatePanel() {
               >
                 <span className={`state-lib-badge lib-${s.lib}`}>{s.lib}</span>
                 <span className="state-store-name">{s.name}</span>
-                {s.canSet && (
-                  <span className="state-canset" title="Writable (editing coming soon)">
-                    ✎
+                {s.history.length > 1 && (
+                  <span className="state-store-count" title={`${s.history.length} snapshots`}>
+                    {s.history.length}
                   </span>
                 )}
               </li>
@@ -66,16 +67,19 @@ export function StatePanel() {
         )}
       </div>
 
-      <div className="state-right">
-        {selected ? (
-          <StoreDetails store={selected} query={query} onQuery={setQuery} />
-        ) : (
-          <div className="state-no-selection">
-            <div className="state-no-selection-icon">👈</div>
-            <p>Select a store</p>
-          </div>
-        )}
-      </div>
+      {selected ? (
+        <StoreDetails
+          key={selected.storeId}
+          store={selected}
+          query={query}
+          onQuery={setQuery}
+        />
+      ) : (
+        <div className="state-no-selection">
+          <div className="state-no-selection-icon">👈</div>
+          <p>Select a store</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -85,44 +89,107 @@ function StoreDetails({
   query,
   onQuery,
 }: {
-  store: StoreSnapshot;
+  store: StoreEntry;
   query: string;
   onQuery: (q: string) => void;
 }) {
-  const q = query.trim().toLowerCase();
-  return (
-    <div className="store-details">
-      <header className="store-details-header">
-        <div className="store-details-title">
-          <span className={`state-lib-badge lib-${store.lib}`}>{store.lib}</span>
-          <h2>{store.name}</h2>
-        </div>
-        <span className="store-details-updated">
-          updated {new Date(store.at).toLocaleTimeString()}
-        </span>
-      </header>
+  // null = follow live (latest). Otherwise pin to a snapshot by timestamp.
+  const [pinnedAt, setPinnedAt] = useState<string | null>(null);
 
-      <div className="store-search-row">
-        <input
-          className="store-search"
-          type="text"
-          value={query}
-          onChange={(e) => onQuery(e.target.value)}
-          placeholder="Filter keys / values…"
-          spellCheck={false}
-        />
-        {query && (
-          <button className="store-search-clear" onClick={() => onQuery("")} type="button">
-            ✕
-          </button>
-        )}
+  // If the pinned snapshot fell out of the (capped) history, drop back to live.
+  useEffect(() => {
+    if (pinnedAt && !store.history.some((h) => h.at === pinnedAt)) {
+      setPinnedAt(null);
+    }
+  }, [store.history, pinnedAt]);
+
+  const viewing =
+    (pinnedAt && store.history.find((h) => h.at === pinnedAt)) ||
+    store.history[0];
+  const isLive = !pinnedAt || store.history[0]?.at === pinnedAt;
+  const q = query.trim().toLowerCase();
+
+  return (
+    <div className="state-main">
+      <div className="store-pane">
+        <header className="store-details-header">
+          <div className="store-details-title">
+            <span className={`state-lib-badge lib-${store.lib}`}>
+              {store.lib}
+            </span>
+            <h2>{store.name}</h2>
+          </div>
+          {isLive ? (
+            <span className="store-live-badge">● Live</span>
+          ) : (
+            <button
+              className="store-backtolive"
+              type="button"
+              onClick={() => setPinnedAt(null)}
+            >
+              ← Back to live
+            </button>
+          )}
+        </header>
+
+        <div className="store-search-row">
+          <input
+            className="store-search"
+            type="text"
+            value={query}
+            onChange={(e) => onQuery(e.target.value)}
+            placeholder="Filter keys / values…"
+            spellCheck={false}
+          />
+          {query && (
+            <button
+              className="store-search-clear"
+              onClick={() => onQuery("")}
+              type="button"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <div className="json-tree">
+          <JsonNode keyLabel={null} value={viewing?.state} depth={0} query={q} />
+        </div>
       </div>
 
-      <div className="json-tree">
-        <JsonNode keyLabel={null} value={store.state} depth={0} query={q} />
+      <div className="state-history">
+        <div className="state-history-header">History</div>
+        <ul className="state-history-list">
+          {store.history.map((snap, i) => {
+            const active = viewing?.at === snap.at;
+            return (
+              <li
+                key={snap.at + i}
+                className={`state-history-item ${active ? "active" : ""}`}
+                onClick={() => setPinnedAt(i === 0 ? null : snap.at)}
+                title={new Date(snap.at).toLocaleString()}
+              >
+                <span className="state-history-dot" />
+                <span className="state-history-time">{formatTime(snap.at)}</span>
+                {i === 0 && <span className="state-history-live">live</span>}
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </div>
   );
+}
+
+function formatTime(at: string): string {
+  const d = new Date(at);
+  const t = d.toLocaleTimeString(undefined, {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  return `${t}.${d.getMilliseconds().toString().padStart(3, "0")}`;
 }
 
 // ─── JSON tree ───────────────────────────────────────────────────────────────
@@ -240,7 +307,6 @@ function JsonNode({
   query: string;
 }) {
   const node = classify(value);
-  // Auto-expand top levels; when searching, expand everything on the path.
   const [open, setOpen] = useState(depth < 2);
   const expanded = query ? true : open;
 
