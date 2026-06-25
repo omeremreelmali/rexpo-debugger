@@ -393,16 +393,23 @@ export async function sendInitialBurst(send) {
 
   // 14. State stores — populate the State tab (Redux / Zustand / custom).
   await sleep(60);
-  sendStateSnapshots(send);
+  await sendStateSnapshots(send);
 }
 
 /** Demo store snapshots for the State tab screenshot. */
-export function sendStateSnapshots(send) {
-  const at = new Date().toISOString();
+export async function sendStateSnapshots(send) {
   const snap = (storeId, name, lib, state, canSet = true) =>
-    send({ type: "state", storeId, name, lib, state, canSet, at });
+    send({
+      type: "state",
+      storeId,
+      name,
+      lib,
+      state,
+      canSet,
+      at: new Date().toISOString(),
+    });
 
-  snap("auth", "auth", "zustand", {
+  snap("s:auth", "auth", "zustand", {
     user: {
       id: 42,
       name: "Ada Lovelace",
@@ -417,7 +424,7 @@ export function sendStateSnapshots(send) {
     logout: { __rexpo: "function", name: "logout" },
   });
 
-  snap("cart", "cart", "zustand", {
+  snap("s:cart", "cart", "zustand", {
     items: [
       { id: "sku_204", title: "Mechanical Keyboard", qty: 1, price: 129.0 },
       { id: "sku_881", title: "USB-C Hub", qty: 2, price: 39.5 },
@@ -429,17 +436,20 @@ export function sendStateSnapshots(send) {
     addItem: { __rexpo: "function", name: "addItem" },
   });
 
-  snap(
-    "app",
-    "app",
-    "redux",
-    {
-      ui: { theme: "system", sidebarOpen: true, activeTab: "home" },
-      flags: { betaCheckout: true, newPricing: false },
-      network: { online: true, lastSyncAt: "2026-06-25T13:02:11.000Z" },
-    },
-    false
-  );
+  // Evolving "app" store (alpha-first → auto-selected) so the history timeline
+  // shows several timestamped snapshots in the screenshot.
+  const appState = (activeTab, lastSyncAt) => ({
+    ui: { theme: "system", sidebarOpen: true, activeTab },
+    flags: { betaCheckout: true, newPricing: false },
+    network: { online: true, lastSyncAt },
+  });
+  snap("s:app", "app", "redux", appState("home", "2026-06-25T13:02:11.000Z"), false);
+  await sleep(180);
+  snap("s:app", "app", "redux", appState("products", "2026-06-25T13:02:31.000Z"), false);
+  await sleep(180);
+  snap("s:app", "app", "redux", appState("product/sku_204", "2026-06-25T13:02:52.000Z"), false);
+  await sleep(180);
+  snap("s:app", "app", "redux", appState("checkout", "2026-06-25T13:03:18.000Z"), false);
 }
 
 // A small, hand-crafted set of saved requests so the Collections tab looks
