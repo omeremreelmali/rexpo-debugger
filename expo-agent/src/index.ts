@@ -9,7 +9,7 @@
 
 // Network Agent
 export { initNetworkAgent, addAxiosInstance } from "./agent";
-export type { InitOptions } from "./agent";
+export type { InitOptions, FormDataPart } from "./agent";
 
 // Console Agent
 export { initConsoleAgent, restoreConsole } from "./console-agent";

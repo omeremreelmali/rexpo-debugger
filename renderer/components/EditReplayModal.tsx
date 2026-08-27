@@ -4,6 +4,7 @@ import { sendReplayCommand } from "../utils/replayRequest";
 import { useCollections } from "../state/CollectionsContext";
 import { useToast } from "./Toast";
 import { SaveRequestModal } from "./SaveRequestModal";
+import { FormDataViewer } from "./FormDataViewer";
 import "./EditReplayModal.css";
 
 interface EditReplayModalProps {
@@ -133,7 +134,13 @@ export function EditReplayModal({
   const [headers, setHeaders] = useState<KeyValueRow[]>(() =>
     headersToRows(request.requestHeaders)
   );
-  const [body, setBody] = useState<string>(() => tryPrettyJson(request.requestBodySnippet || ""));
+  // Multipart bodies are replayed from their captured parts — the snippet is
+  // only a human-readable summary, so it must never reach the body field.
+  const formParts = request.requestFormParts;
+  const isMultipart = !!formParts?.length;
+  const [body, setBody] = useState<string>(() =>
+    isMultipart ? "" : tryPrettyJson(request.requestBodySnippet || "")
+  );
   const [revealedHeaderIds, setRevealedHeaderIds] = useState<Set<string>>(new Set());
 
   // Live preview of the resolved URL — what we'll actually send.
@@ -224,11 +231,13 @@ export function EditReplayModal({
   const prettifyBody = () => setBody(tryPrettyJson(body));
 
   const handleSend = () => {
+    const sendsFormData = hasBody && isMultipart;
     sendReplayCommand({
       url: resolvedUrl,
       method,
       headers: rowsToHeaders(headers),
-      body: hasBody ? body : undefined,
+      body: hasBody && !sendsFormData ? body : undefined,
+      formParts: sendsFormData ? formParts : undefined,
     });
     onClose();
   };
@@ -240,9 +249,11 @@ export function EditReplayModal({
       method,
       url: resolvedUrl,
       requestHeaders: rowsToHeaders(headers),
-      requestBodySnippet: hasBody ? body : undefined,
+      requestBodySnippet:
+        hasBody && isMultipart ? request.requestBodySnippet : hasBody ? body : undefined,
+      requestFormParts: hasBody && isMultipart ? formParts : undefined,
     }),
-    [request, method, resolvedUrl, headers, hasBody, body]
+    [request, method, resolvedUrl, headers, hasBody, body, isMultipart, formParts]
   );
 
   /** Overwrite the existing saved request with the edited values. */
@@ -252,7 +263,8 @@ export function EditReplayModal({
       method,
       url: resolvedUrl,
       headers: rowsToHeaders(headers),
-      body: hasBody ? body : undefined,
+      body: hasBody && !isMultipart ? body : undefined,
+      formParts: hasBody && isMultipart ? formParts : undefined,
     });
     toast.show("Saved request güncellendi", "success");
     onClose();
@@ -447,7 +459,20 @@ export function EditReplayModal({
           </section>
 
           {/* Body */}
-          {hasBody && (
+          {hasBody && isMultipart && (
+            <section className="edit-replay-section">
+              <header className="edit-replay-section-header">
+                <h3>Body</h3>
+              </header>
+              <FormDataViewer parts={formParts!} />
+              <p className="edit-replay-body-hint">
+                Multipart parts are replayed exactly as captured — files are
+                re-read on the device from their local uri.
+              </p>
+            </section>
+          )}
+
+          {hasBody && !isMultipart && (
             <section className="edit-replay-section">
               <header className="edit-replay-section-header">
                 <h3>Body</h3>

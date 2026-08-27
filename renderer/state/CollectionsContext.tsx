@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { FormDataPart } from "../types";
 
 const STORAGE_KEY = "rexpo-debugger-collections";
 
@@ -26,6 +27,12 @@ export interface SavedRequest {
   url: string;
   headers?: Record<string, string>;
   body?: string;
+  /**
+   * Multipart parts, when the request was `multipart/form-data`. Replaying
+   * these re-reads each file on the device from its local uri, so a saved
+   * upload only replays while that file still exists there.
+   */
+  formParts?: FormDataPart[];
 
   createdAt: string;
   updatedAt?: string;

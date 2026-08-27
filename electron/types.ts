@@ -2,6 +2,27 @@
 
 export type LogLevel = "log" | "warn" | "error" | "info" | "debug";
 
+/**
+ * A single `multipart/form-data` part as captured by the agent. File parts
+ * carry metadata only — the bytes stay on the device.
+ */
+export interface FormDataPart {
+  /** Field name, i.e. the first argument of `FormData.append()` */
+  name: string;
+  /** "file" when the part carries a file/blob, "text" for plain values */
+  kind: "file" | "text";
+  /** Plain value — only for `kind: "text"` (truncated) */
+  value?: string;
+  /** Original file name, e.g. "avatar.jpg" */
+  fileName?: string;
+  /** Content type of the part, e.g. "image/jpeg" */
+  mimeType?: string;
+  /** Size in bytes, when the platform exposes it */
+  size?: number;
+  /** Device-local uri, e.g. "file:///var/mobile/.../avatar.jpg" */
+  uri?: string;
+}
+
 export type NetworkMessage =
   | {
       type: "request";
@@ -10,6 +31,9 @@ export type NetworkMessage =
       method: string;
       requestHeaders?: Record<string, string>;
       requestBodySnippet?: string;
+      /** "formdata" when the body was multipart — see `requestFormParts` */
+      requestBodyKind?: "formdata";
+      requestFormParts?: FormDataPart[];
       startedAt: string;
     }
   | {
@@ -43,6 +67,8 @@ export interface RequestState {
   requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
   requestBodySnippet?: string;
+  requestBodyKind?: "formdata";
+  requestFormParts?: FormDataPart[];
   responseBodySnippet?: string;
   durationMs?: number;
   startedAt: string;
@@ -99,5 +125,11 @@ export type CommandMessage = {
     method: string;
     headers?: Record<string, string>;
     body?: string;
+    /**
+     * Multipart parts to rebuild on the device. When present the agent
+     * reconstructs a FormData (re-reading files from their local uri) and
+     * ignores `body`.
+     */
+    formParts?: FormDataPart[];
   };
 };

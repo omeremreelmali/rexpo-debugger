@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-08-27
+
+### ✨ Added — multipart/form-data visibility
+
+File uploads used to show up as a bare `[FormData]` string, so there was no
+way to tell which fields — let alone which files — an app had actually sent.
+
+Agent (`rexpo-debugger` 1.4.0):
+
+- **Multipart bodies are expanded into parts.** Every `FormData` field is
+  captured as a `requestFormParts` entry: text fields keep their value, file
+  fields carry `fileName`, `mimeType`, `size` and the device-local `uri`.
+  Works with the React Native `FormData` (`_parts`), web `FormData`, `File` /
+  `Blob` values, and `{ uri, name, type }` objects from expo-image-picker.
+- **Already-serialized multipart bodies are parsed too**, using the boundary
+  from the `content-type` header.
+- **File contents never leave the device** — only the metadata above.
+- Capped at 100 parts and 2000 chars per text value so a large upload can't
+  flood the socket.
+- `fetch(new Request(...))` now reports its method, headers and body instead
+  of falling back to `GET` with no body.
+
+Desktop (1.7.0):
+
+- **Request tab renders a form-data breakdown** — one row per field, with
+  FILE/TEXT badges, mime type, size and the local uri for uploads.
+- **Replay / Edit & Replay rebuild the FormData on the device**, re-reading
+  each file from its uri, and drop the captured `content-type` so the
+  platform generates a fresh boundary. Previously the human-readable summary
+  was sent as the raw body.
+- **Copy as cURL emits `-F` flags** for multipart requests (`name=@path`
+  with `;type=`), and no longer leaks the stale boundary header. Shell
+  quoting of single quotes in headers, bodies and URLs is fixed while at it.
+- Saved requests (Collections) keep their multipart parts, so a saved upload
+  replays as an upload.
+- **Find in details** adds `Cmd/Ctrl+F` search to request/response headers,
+  request and response bodies, FormData metadata, console messages, stack
+  traces and raw console data, with match highlighting and next/previous
+  navigation.
+
 ## [1.2.2] - 2026-05-21
 
 ### 📚 Docs

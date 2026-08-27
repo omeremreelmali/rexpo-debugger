@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { generateCurlCommand, copyToClipboard } from "../utils/curlGenerator";
+import { replayRequest } from "../utils/replayRequest";
 import { JsonViewer, TextViewer } from "./JsonViewer";
+import { FormDataViewer } from "./FormDataViewer";
+import { FindInContent } from "./FindInContent";
 import "./RequestDetails.css";
 
 type Tab = "overview" | "headers" | "request" | "response" | "timing";
@@ -30,17 +33,7 @@ export function RequestDetails() {
 
   const handleReplay = () => {
     if (!selectedRequest) return;
-
-    window.electron.sendCommand({
-      type: "command",
-      command: "replay_request",
-      payload: {
-        url: selectedRequest.url,
-        method: selectedRequest.method,
-        headers: selectedRequest.requestHeaders,
-        body: selectedRequest.requestBodySnippet,
-      },
-    });
+    replayRequest(selectedRequest);
   };
 
   if (!selectedRequest) {
@@ -72,6 +65,30 @@ export function RequestDetails() {
     { id: "timing", label: "Timing" },
   ];
 
+  const headersText = [
+    "Request Headers",
+    ...Object.entries(selectedRequest.requestHeaders ?? {}).map(([key, value]) => `${key}: ${value}`),
+    "",
+    "Response Headers",
+    ...Object.entries(selectedRequest.responseHeaders ?? {}).map(([key, value]) => `${key}: ${value}`),
+  ].join("\n");
+
+  const requestText = selectedRequest.requestFormParts?.length
+    ? selectedRequest.requestFormParts.map((part) =>
+        [part.name, part.kind, part.value, part.fileName, part.mimeType, part.size, part.uri]
+          .filter((value) => value !== undefined)
+          .join(": ")
+      ).join("\n")
+    : selectedRequest.requestBodySnippet ?? "";
+
+  const searchableText = activeTab === "headers"
+    ? headersText
+    : activeTab === "request"
+      ? requestText
+      : activeTab === "response"
+        ? selectedRequest.responseBodySnippet ?? ""
+        : "";
+
   return (
     <div className="request-details-container">
       <div className="details-tabs">
@@ -87,6 +104,12 @@ export function RequestDetails() {
       </div>
 
       <div className="details-content">
+        <FindInContent
+          key={`${selectedRequest.id}-${activeTab}`}
+          text={searchableText}
+          placeholder={`Find in ${activeTab}`}
+          enabled={activeTab === "headers" || activeTab === "request" || activeTab === "response"}
+        >
         {activeTab === "overview" && (
           <div className="details-section">
             <div className="section-header">
@@ -202,7 +225,9 @@ export function RequestDetails() {
         {activeTab === "request" && (
           <div className="details-section">
             <h3>Request Body</h3>
-            {selectedRequest.requestBodySnippet ? (
+            {selectedRequest.requestFormParts?.length ? (
+              <FormDataViewer parts={selectedRequest.requestFormParts} />
+            ) : selectedRequest.requestBodySnippet ? (
               isJson(selectedRequest.requestBodySnippet) ? (
                 <JsonViewer data={selectedRequest.requestBodySnippet} />
               ) : (
@@ -260,6 +285,7 @@ export function RequestDetails() {
             </div>
           </div>
         )}
+        </FindInContent>
       </div>
     </div>
   );

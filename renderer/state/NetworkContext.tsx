@@ -98,6 +98,8 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
             method: message.method,
             requestHeaders: message.requestHeaders,
             requestBodySnippet: message.requestBodySnippet,
+            requestBodyKind: message.requestBodyKind,
+            requestFormParts: message.requestFormParts,
             startedAt: message.startedAt,
           };
           return { ...state, requests: updated };
@@ -109,6 +111,8 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
             method: message.method,
             requestHeaders: message.requestHeaders,
             requestBodySnippet: message.requestBodySnippet,
+            requestBodyKind: message.requestBodyKind,
+            requestFormParts: message.requestFormParts,
             startedAt: message.startedAt,
           };
           return {

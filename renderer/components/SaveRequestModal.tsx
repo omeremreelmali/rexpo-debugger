@@ -37,6 +37,9 @@ export function SaveRequestModal({ source, editingId, onClose }: SaveRequestModa
   const seedBody = isEdit
     ? (source as SavedRequest).body
     : (source as RequestState).requestBodySnippet;
+  const seedFormParts = isEdit
+    ? (source as SavedRequest).formParts
+    : (source as RequestState).requestFormParts;
   const seedName = isEdit ? (source as SavedRequest).name ?? "" : "";
   const seedCollection = isEdit ? (source as SavedRequest).collectionName ?? "" : "";
   const seedTags = isEdit
@@ -95,6 +98,7 @@ export function SaveRequestModal({ source, editingId, onClose }: SaveRequestModa
       url: source.url,
       headers: seedHeaders,
       body: seedBody,
+      formParts: seedFormParts,
     };
 
     if (isEdit && editingId) {

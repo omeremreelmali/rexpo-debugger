@@ -312,6 +312,12 @@
   font-family: monospace;
 }
 
+.edit-replay-body-hint {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin: 6px 0 0;
+}
+
 .edit-replay-footer {
   display: flex;
   justify-content: space-between;

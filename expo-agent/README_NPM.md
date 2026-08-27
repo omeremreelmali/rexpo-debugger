@@ -22,6 +22,7 @@
 - 🚀 **Real-time monitoring** - Capture all network requests instantly
 - 📦 **Fetch & Axios support** - Automatically intercepts both
 - 🔍 **Request/Response inspection** - Headers, body, timing, everything
+- 📎 **File uploads** - `multipart/form-data` bodies are broken down per field, with each file's name, type, size and local uri
 - 🔧 **Custom axios instances** - Support for multiple instances
 
 ### Console Monitoring (NEW! 🎉)
@@ -263,6 +264,11 @@ If you can't connect, make sure port `5051` is open in your firewall.
 ### Body not showing
 
 Binary or stream-based content cannot be displayed. The agent only shows text-based request/response bodies.
+
+`multipart/form-data` uploads are the exception: the inspector lists every field
+and, for each uploaded file, its field name, file name, mime type, size and
+local `file://` uri. File contents stay on the device — only that metadata is
+sent to the desktop app.
 
 ## 🤝 Contributing
 

@@ -17,6 +17,28 @@
  * ```
  */
 
+/**
+ * A single `multipart/form-data` part. File parts never carry their bytes —
+ * only the metadata the app handed to `FormData.append()` (name, mime type,
+ * size and, on React Native, the local `file://` uri).
+ */
+export type FormDataPart = {
+  /** Field name, i.e. the first argument of `FormData.append()` */
+  name: string;
+  /** "file" when the part carries a file/blob, "text" for plain values */
+  kind: "file" | "text";
+  /** Plain value — only for `kind: "text"` (truncated) */
+  value?: string;
+  /** Original file name, e.g. "avatar.jpg" */
+  fileName?: string;
+  /** Content type of the part, e.g. "image/jpeg" */
+  mimeType?: string;
+  /** Size in bytes, when the platform exposes it */
+  size?: number;
+  /** Device-local uri, e.g. "file:///var/mobile/.../avatar.jpg" */
+  uri?: string;
+};
+
 type NetworkMessage =
   | {
       type: "request";
@@ -25,6 +47,9 @@ type NetworkMessage =
       method: string;
       requestHeaders?: Record<string, string>;
       requestBodySnippet?: string;
+      /** "formdata" when the body was multipart — see `requestFormParts` */
+      requestBodyKind?: "formdata";
+      requestFormParts?: FormDataPart[];
       startedAt: string;
     }
   | {
@@ -221,12 +246,29 @@ function connectSocket(wsUrl: string) {
         const dataStr = typeof event.data === "string" ? event.data : event.data.toString();
         const message = JSON.parse(dataStr);
         if (message.type === "command" && message.command === "replay_request") {
-          const { url, method, headers, body } = message.payload;
+          const { url, method, headers, body, formParts } = message.payload;
           debugLog(`[NetworkAgent] 🔄 Replaying request: ${method} ${url}`);
 
           const init: any = { method };
           if (headers) init.headers = headers;
-          if (body && ["POST", "PUT", "PATCH"].includes(method.toUpperCase())) {
+          const methodAllowsBody = ["POST", "PUT", "PATCH"].includes(
+            method.toUpperCase()
+          );
+
+          if (methodAllowsBody && Array.isArray(formParts) && formParts.length) {
+            // Rebuild the multipart body. Files are re-read from their local
+            // uri on the device — the desktop app never holds the bytes.
+            init.body = buildFormDataFromParts(formParts);
+            // Drop the captured content-type so the platform can generate a
+            // fresh boundary that matches the body we just built.
+            if (init.headers) {
+              init.headers = Object.fromEntries(
+                Object.entries(init.headers as Record<string, string>).filter(
+                  ([key]) => key.toLowerCase() !== "content-type"
+                )
+              );
+            }
+          } else if (body && methodAllowsBody) {
             init.body = body;
           }
 
@@ -339,17 +381,19 @@ export function initNetworkAgent(options: InitOptions = {}) {
         : input instanceof URL
         ? input.href
         : input.url;
-    const method = init?.method?.toUpperCase() || "GET";
+    const method = (init?.method ?? (input as any)?.method)?.toUpperCase() || "GET";
 
-    // Normalize request headers
-    const requestHeaders = init?.headers
-      ? normalizeHeaders(init.headers)
+    // Normalize request headers — when fetch is called with a Request object
+    // the headers/body live on it instead of on `init`
+    const headerSource = init?.headers ?? (input as any)?.headers;
+    const requestHeaders = headerSource
+      ? normalizeHeaders(headerSource)
       : undefined;
 
-    // Get request body as snippet
-    const requestBodySnippet = init?.body
-      ? createBodySnippet(init.body, maxBodyLength)
-      : undefined;
+    // Describe the request body (multipart bodies get expanded into parts)
+    const bodySource = init?.body ?? (input as any)?._bodyInit;
+    const { requestBodySnippet, requestBodyKind, requestFormParts } =
+      describeRequestBody(bodySource, requestHeaders, maxBodyLength);
 
     // Send request message
     debugLog(
@@ -363,6 +407,8 @@ export function initNetworkAgent(options: InitOptions = {}) {
       method,
       requestHeaders,
       requestBodySnippet,
+      requestBodyKind,
+      requestFormParts,
       startedAt,
     });
 
@@ -483,9 +529,11 @@ export function initNetworkAgent(options: InitOptions = {}) {
             url: fullUrl,
             method,
             requestHeaders: config.headers || {},
-            requestBodySnippet: config.data
-              ? createBodySnippet(config.data, maxBodyLength)
-              : undefined,
+            ...describeRequestBody(
+              config.data,
+              normalizeHeaders(config.headers),
+              maxBodyLength
+            ),
             startedAt,
           });
 
@@ -806,6 +854,273 @@ function normalizeHeaders(headers: any): Record<string, string> {
   return result;
 }
 
+/** Hard caps so a huge upload can never flood the socket */
+const MAX_FORM_PARTS = 100;
+const MAX_FORM_VALUE_LENGTH = 2000;
+
+/**
+ * Detects FormData without relying on `instanceof` — the constructor differs
+ * between the React Native polyfill, Expo Go and any userland polyfill.
+ */
+function isFormDataLike(body: any): boolean {
+  if (!body || typeof body !== "object") return false;
+  if (typeof FormData !== "undefined" && body instanceof FormData) return true;
+  // React Native keeps the raw [name, value] tuples on `_parts`
+  if (Array.isArray(body._parts)) return true;
+  if (body.constructor?.name === "FormData") return true;
+  return typeof body.append === "function" && typeof body.getParts === "function";
+}
+
+/**
+ * Describes one appended value. Files can arrive in three shapes:
+ * `{ uri, name, type }` (React Native / expo-image-picker), a web `File`, or
+ * a React Native `Blob` (metadata lives on `_data`).
+ */
+function toFormDataPart(name: string, value: any): FormDataPart {
+  if (value === null || value === undefined) {
+    return { name, kind: "text", value: String(value) };
+  }
+
+  if (typeof value !== "object") {
+    return {
+      name,
+      kind: "text",
+      value: createTextSnippet(String(value), MAX_FORM_VALUE_LENGTH),
+    };
+  }
+
+  const blobData = value._data || {};
+  const uri = typeof value.uri === "string" ? value.uri : undefined;
+  const fileName = value.name ?? value.fileName ?? value.filename ?? blobData.name;
+  const mimeType = value.type ?? value.mimeType ?? blobData.type;
+  const size =
+    typeof value.size === "number"
+      ? value.size
+      : typeof blobData.size === "number"
+      ? blobData.size
+      : undefined;
+
+  if (uri || fileName || size !== undefined) {
+    return {
+      name,
+      kind: "file",
+      uri,
+      fileName: fileName ? String(fileName) : undefined,
+      mimeType: mimeType ? String(mimeType) : undefined,
+      size,
+    };
+  }
+
+  try {
+    return {
+      name,
+      kind: "text",
+      value: createTextSnippet(JSON.stringify(value), MAX_FORM_VALUE_LENGTH),
+    };
+  } catch {
+    return { name, kind: "text", value: "[unserializable value]" };
+  }
+}
+
+/**
+ * Reads every field out of a FormData instance.
+ */
+function readFormDataParts(body: any): FormDataPart[] {
+  const parts: FormDataPart[] = [];
+
+  const push = (name: any, value: any) => {
+    if (parts.length >= MAX_FORM_PARTS) return;
+    parts.push(toFormDataPart(String(name), value));
+  };
+
+  try {
+    if (Array.isArray(body._parts)) {
+      // React Native
+      body._parts.forEach((entry: any) => {
+        if (Array.isArray(entry)) push(entry[0], entry[1]);
+      });
+    } else if (typeof body.forEach === "function") {
+      // Web FormData — forEach(value, name)
+      body.forEach((value: any, entryName: any) => push(entryName, value));
+    } else if (typeof body.entries === "function") {
+      for (const [entryName, value] of body.entries()) push(entryName, value);
+    }
+  } catch (err) {
+    debugLog("[NetworkAgent] Failed to read FormData parts:", err);
+  }
+
+  return parts;
+}
+
+/** Pulls the boundary token out of a `multipart/form-data; boundary=…` header */
+function getMultipartBoundary(contentType?: string): string | undefined {
+  if (!contentType || !/multipart\/form-data/i.test(contentType)) return undefined;
+  const match = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
+  const boundary = match?.[1] || match?.[2];
+  return boundary ? boundary.trim() : undefined;
+}
+
+/**
+ * Parses an already-serialized multipart body (some HTTP clients hand us the
+ * encoded string instead of the FormData object).
+ */
+function parseMultipartText(text: string, boundary: string): FormDataPart[] {
+  const parts: FormDataPart[] = [];
+
+  for (const segment of text.split(`--${boundary}`)) {
+    if (parts.length >= MAX_FORM_PARTS) break;
+
+    const body = segment.replace(/^\r?\n/, "");
+    // Skip the preamble and the closing "--" delimiter
+    if (!body || body.startsWith("--")) continue;
+
+    const separator = body.search(/\r?\n\r?\n/);
+    if (separator === -1) continue;
+
+    const rawHeaders = body.slice(0, separator);
+    const rawValue = body
+      .slice(separator)
+      .replace(/^\r?\n\r?\n/, "")
+      .replace(/\r?\n$/, "");
+
+    const name = /name="([^"]*)"/i.exec(rawHeaders)?.[1];
+    if (name === undefined) continue;
+
+    const fileName = /filename="([^"]*)"/i.exec(rawHeaders)?.[1];
+    const mimeType = /content-type:\s*([^\r\n]+)/i.exec(rawHeaders)?.[1]?.trim();
+
+    if (fileName !== undefined) {
+      // Already encoded, so the payload length is our best size estimate
+      parts.push({ name, kind: "file", fileName, mimeType, size: rawValue.length });
+    } else {
+      parts.push({
+        name,
+        kind: "text",
+        value: createTextSnippet(rawValue, MAX_FORM_VALUE_LENGTH),
+      });
+    }
+  }
+
+  return parts;
+}
+
+/** Human-readable byte count for the fallback snippet */
+function formatBytes(bytes?: number): string | undefined {
+  if (bytes === undefined || !isFinite(bytes)) return undefined;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+/**
+ * Plain-text rendering of the parts — kept so copy-as-cURL, saved requests and
+ * older desktop builds still show something meaningful.
+ */
+function formatFormDataParts(parts: FormDataPart[]): string {
+  const lines = [`multipart/form-data — ${parts.length} part(s)`];
+
+  parts.forEach((part) => {
+    if (part.kind === "file") {
+      const meta = [part.mimeType, formatBytes(part.size)].filter(Boolean).join(", ");
+      const label = part.fileName || "(unnamed file)";
+      lines.push(
+        `${part.name}: [file] ${label}${meta ? ` (${meta})` : ""}${
+          part.uri ? ` ${part.uri}` : ""
+        }`
+      );
+    } else {
+      lines.push(`${part.name}: ${part.value ?? ""}`);
+    }
+  });
+
+  if (parts.length >= MAX_FORM_PARTS) {
+    lines.push(`…[only the first ${MAX_FORM_PARTS} parts are captured]`);
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Rebuilds a FormData from captured parts so a multipart request can be
+ * replayed. File bytes never leave the device: only the local uri travels to
+ * the inspector and back, and the platform re-reads the file when sending.
+ * Parts captured without a uri (already-serialized bodies) cannot be restored.
+ */
+function buildFormDataFromParts(parts: FormDataPart[]): FormData {
+  const form = new FormData();
+
+  parts.forEach((part) => {
+    if (part.kind === "file") {
+      if (!part.uri) {
+        errorLog(
+          `[NetworkAgent] ⚠️ Skipping file part "${part.name}" during replay — no local uri captured`
+        );
+        return;
+      }
+      form.append(part.name, {
+        uri: part.uri,
+        name: part.fileName || "file",
+        type: part.mimeType || "application/octet-stream",
+      } as any);
+    } else {
+      form.append(part.name, part.value ?? "");
+    }
+  });
+
+  return form;
+}
+
+/**
+ * Returns the multipart parts of a request body, or undefined when the body is
+ * not multipart. Handles both live FormData objects and pre-serialized bodies.
+ */
+function extractFormParts(
+  body: any,
+  headers?: Record<string, string>
+): FormDataPart[] | undefined {
+  if (isFormDataLike(body)) {
+    return readFormDataParts(body);
+  }
+
+  if (typeof body === "string") {
+    const boundary = getMultipartBoundary(headers?.["content-type"]);
+    if (boundary) {
+      const parts = parseMultipartText(body, boundary);
+      if (parts.length > 0) return parts;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Builds the body-related fields of a "request" message. Multipart bodies get
+ * expanded into `requestFormParts` so the inspector can list every field and
+ * uploaded file instead of showing an opaque "[FormData]".
+ */
+function describeRequestBody(
+  body: any,
+  headers: Record<string, string> | undefined,
+  maxLen: number
+): {
+  requestBodySnippet?: string;
+  requestBodyKind?: "formdata";
+  requestFormParts?: FormDataPart[];
+} {
+  if (body === undefined || body === null) return {};
+
+  const formParts = extractFormParts(body, headers);
+  if (formParts) {
+    return {
+      requestBodyKind: "formdata",
+      requestFormParts: formParts,
+      requestBodySnippet: formatFormDataParts(formParts),
+    };
+  }
+
+  return { requestBodySnippet: createBodySnippet(body, maxLen) };
+}
+
 /**
  * Converts body to snippet
  */
@@ -815,8 +1130,8 @@ function createBodySnippet(body: any, maxLen: number): string {
       return createTextSnippet(body, maxLen);
     }
 
-    if (body instanceof FormData) {
-      return "[FormData]";
+    if (isFormDataLike(body)) {
+      return formatFormDataParts(readFormDataParts(body));
     }
 
     if (body instanceof Blob) {
@@ -913,9 +1228,11 @@ export function addAxiosInstance(axiosInstance: any) {
         url: fullUrl,
         method,
         requestHeaders: config.headers || {},
-        requestBodySnippet: config.data
-          ? createBodySnippet(config.data, maxBodyLength)
-          : undefined,
+        ...describeRequestBody(
+          config.data,
+          normalizeHeaders(config.headers),
+          maxBodyLength
+        ),
         startedAt,
       });
 

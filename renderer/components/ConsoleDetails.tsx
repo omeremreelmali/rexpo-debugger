@@ -3,6 +3,7 @@ import { useNetwork } from "../state/NetworkContext";
 import { JsonViewer, TextViewer } from "./JsonViewer";
 import { copyToClipboard } from "../utils/curlGenerator";
 import { consoleLogToText, formatConsoleArg } from "../utils/consoleFormat";
+import { FindInContent } from "./FindInContent";
 import "./ConsoleDetails.css";
 
 /** Small inline button that copies plain text and flashes "Copied". */
@@ -60,6 +61,16 @@ export function ConsoleDetails() {
       </div>
 
       <div className="console-details-body">
+        <FindInContent
+          key={selectedLog.id}
+          text={[
+            "Message",
+            ...selectedLog.args.map((arg) => formatConsoleArg(arg)),
+            selectedLog.stack ? `\nStack Trace\n${selectedLog.stack}` : "",
+            `\nRaw Data\n${JSON.stringify(selectedLog, null, 2)}`,
+          ].join("\n")}
+          placeholder="Find in console details"
+        >
         {/* Arguments */}
         <div className="console-details-section">
           <div className="console-details-section-title">
@@ -105,6 +116,7 @@ export function ConsoleDetails() {
             <JsonViewer data={JSON.stringify(selectedLog)} />
           </div>
         </div>
+        </FindInContent>
       </div>
     </div>
   );

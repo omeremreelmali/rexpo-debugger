@@ -328,9 +328,9 @@ Open your application on a physical device or emulator. Network requests will au
   - URL, duration, timestamp information
 - **Right Panel**: Details of selected request
   - **Overview**: Summary information
-  - **Headers**: Request and response headers
-  - **Request**: Request body (JSON pretty-print)
-  - **Response**: Response body (JSON pretty-print)
+  - **Headers**: Request and response headers, searchable with `Cmd/Ctrl+F`
+  - **Request**: Searchable request body (JSON pretty-print, or a per-field breakdown for `multipart/form-data` uploads)
+  - **Response**: Searchable response body (JSON pretty-print)
   - **Timing**: Timing details
 
 ### Console Tab (NEW! 🎉)
@@ -542,6 +542,14 @@ If you don't want a native rebuild, switch to manual `wsUrl` instead.
 ### Body not visible
 
 ⚠️ **Note:** Binary or stream bodies cannot be displayed. The agent only shows text-based bodies.
+
+**`multipart/form-data` uploads** are the exception: the Request tab lists every
+field, and for each uploaded file its field name, file name, mime type, size and
+local `file://` uri. The file *contents* stay on the device — only that metadata
+is sent to the desktop app. Replay and **Edit & Replay** rebuild the FormData on
+the device, so an upload only replays while the file still exists at that uri
+(picker temp files are cleaned up by the OS eventually). "Copy as cURL" turns the
+parts into `-F` flags, with file paths pointing at the device-local path.
 
 ### Not working on emulator
 

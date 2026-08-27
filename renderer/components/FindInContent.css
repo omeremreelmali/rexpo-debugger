@@ -1,0 +1,96 @@
+.find-in-content {
+  min-height: 0;
+}
+
+.find-open-button {
+  float: right;
+  margin: 0 0 8px 8px;
+  padding: 4px 9px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.find-open-button:hover {
+  color: var(--text-primary);
+  background: var(--alt-bg);
+  border-color: var(--accent);
+}
+
+.find-bar {
+  position: sticky;
+  top: -16px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: -16px -16px 14px;
+  padding: 8px 10px;
+  background: var(--elevated-bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+.find-bar input {
+  min-width: 120px;
+  flex: 1;
+  padding: 6px 8px;
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+}
+
+.find-bar input:focus { border-color: var(--accent); }
+
+.find-count {
+  min-width: 58px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.find-bar button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.find-bar button:hover:not(:disabled) { background: var(--alt-bg); border-color: var(--border); }
+.find-bar button:disabled { opacity: 0.35; cursor: default; }
+
+.find-results {
+  clear: both;
+  margin: 0;
+  padding: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: 12px/1.55 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.find-results mark {
+  padding: 0;
+  color: inherit;
+  background: rgba(255, 196, 0, 0.38);
+  border-radius: 2px;
+}
+
+.find-results mark.active {
+  color: #111;
+  background: #ffb300;
+  outline: 1px solid #ffcf4a;
+}

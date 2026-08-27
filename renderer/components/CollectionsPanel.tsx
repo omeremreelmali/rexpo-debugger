@@ -105,6 +105,7 @@ export function CollectionsPanel() {
     method: req.method,
     requestHeaders: req.headers,
     requestBodySnippet: req.body,
+    requestFormParts: req.formParts,
     startedAt: req.createdAt,
   });
 
