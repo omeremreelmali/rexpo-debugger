@@ -4,6 +4,7 @@ import {
   CommandMessage,
   ConnectionInfo,
   StateMessage,
+  FileTransferMessage,
 } from "./types";
 
 // Expose protected methods to renderer process
@@ -38,6 +39,12 @@ contextBridge.exposeInMainWorld("electron", {
     fileName?: string;
     error?: string;
   }> => ipcRenderer.invoke("save-response-to-file", payload),
+  saveBinaryFile: (payload: { defaultName: string; base64: string; mimeType?: string }) =>
+    ipcRenderer.invoke("save-binary-file", payload),
+  onFileTransfer: (callback: (message: FileTransferMessage) => void) => {
+    ipcRenderer.on("file-transfer-message", (_event, message: FileTransferMessage) => callback(message));
+  },
+  removeFileTransferListener: () => ipcRenderer.removeAllListeners("file-transfer-message"),
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => {
     ipcRenderer.on("connection-state-changed", (_event, info: ConnectionInfo) => {
       callback(info);
@@ -83,6 +90,11 @@ export interface ElectronAPI {
     fileName?: string;
     error?: string;
   }>;
+  saveBinaryFile: (payload: { defaultName: string; base64: string; mimeType?: string }) => Promise<{
+    ok: boolean; cancelled?: boolean; filePath?: string; error?: string;
+  }>;
+  onFileTransfer: (callback: (message: FileTransferMessage) => void) => void;
+  removeFileTransferListener: () => void;
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
   removeConnectionStateListener: () => void;
   onSessionStarted: (callback: () => void) => void;
@@ -96,4 +108,3 @@ declare global {
     electron: ElectronAPI;
   }
 }
-

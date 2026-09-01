@@ -227,6 +227,25 @@ async function selectFirstInterestingRequest(cdp) {
   await sleep(250);
 }
 
+async function selectFormDataRequest(cdp) {
+  await cdp.eval(`
+    (function() {
+      const rows = Array.from(document.querySelectorAll('.network-row'));
+      const target = rows.find(r => r.textContent.toLowerCase().includes('profile/avatar'));
+      if (target) target.click();
+    })()
+  `);
+  await sleep(350);
+  await cdp.eval(`
+    (function() {
+      const tabs = Array.from(document.querySelectorAll('.details-tabs .tab-button'));
+      const requestTab = tabs.find(b => /^request$/i.test(b.textContent.trim()));
+      if (requestTab) requestTab.click();
+    })()
+  `);
+  await sleep(350);
+}
+
 async function selectInterestingConsoleLog(cdp) {
   // Prefer an error log so the stack trace appears in the right pane.
   await cdp.eval(`
@@ -323,6 +342,11 @@ async function captureForTheme(cdp, theme) {
   await selectFirstInterestingRequest(cdp);
   await sleep(400);
   await cdp.screenshot(resolve(OUT_DIR, `${theme}-network.png`));
+
+  // 1b. FormData inspector — select the avatar upload and show its Request tab.
+  await selectFormDataRequest(cdp);
+  await sleep(400);
+  await cdp.screenshot(resolve(OUT_DIR, `${theme}-formdata.png`));
 
   // 2. Console tab — pick the error log so the stack trace shows.
   await clickTab(cdp, "console");

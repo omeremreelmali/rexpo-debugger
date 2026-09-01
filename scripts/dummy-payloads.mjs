@@ -14,6 +14,8 @@ export async function sendCall(
     url,
     requestHeaders = {},
     requestBody,
+    requestBodyKind,
+    requestFormParts,
     status,
     statusText,
     responseHeaders = { "content-type": "application/json" },
@@ -42,6 +44,8 @@ export async function sendCall(
         : requestBody
           ? JSON.stringify(requestBody)
           : undefined,
+    requestBodyKind,
+    requestFormParts,
     startedAt,
   });
 
@@ -107,6 +111,44 @@ export async function sendInitialBurst(send) {
       expiresIn: 3600,
     },
     durationMs: 234,
+  });
+
+  // Multipart upload — used by the FormData inspector screenshot and as a
+  // realistic regression payload for file metadata rendering.
+  await sendCall(send, {
+    method: "POST",
+    url: "https://api.rexpo-demo.dev/v1/profile/avatar",
+    requestHeaders: { "content-type": "multipart/form-data; boundary=----RexpoDemoBoundary" },
+    requestBody: "[FormData: 4 parts]",
+    requestBodyKind: "formdata",
+    requestFormParts: [
+      { name: "displayName", kind: "text", value: "Ada Lovelace" },
+      { name: "userId", kind: "text", value: "42" },
+      {
+        name: "avatar",
+        kind: "file",
+        fileName: "profile-photo.jpg",
+        mimeType: "image/jpeg",
+        size: 2487314,
+        uri: "file:///data/user/0/dev.rexpo.demo/cache/profile-photo.jpg",
+      },
+      {
+        name: "resume",
+        kind: "file",
+        fileName: "ada-lovelace-resume.pdf",
+        mimeType: "application/pdf",
+        size: 384220,
+        uri: "file:///data/user/0/dev.rexpo.demo/cache/ada-lovelace-resume.pdf",
+      },
+    ],
+    status: 201,
+    statusText: "Created",
+    responseBody: {
+      uploaded: true,
+      avatarUrl: "https://cdn.rexpo-demo.dev/avatars/user-42.jpg",
+      filesProcessed: 2,
+    },
+    durationMs: 684,
   });
   sendLog(send, "info", [
     "[Auth] Login successful",

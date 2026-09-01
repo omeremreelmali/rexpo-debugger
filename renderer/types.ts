@@ -100,10 +100,22 @@ export interface ConnectionInfo {
   connectedClients: number;
 }
 
-export type CommandMessage = {
-  type: "command";
-  command: "replay_request";
-  payload: {
+export interface FileTransferMessage {
+  type: "file_transfer";
+  transferId: string;
+  status: "content" | "opened" | "error";
+  fileName?: string;
+  mimeType?: string;
+  size?: number;
+  base64?: string;
+  error?: string;
+}
+
+export type CommandMessage =
+  | {
+      type: "command";
+      command: "replay_request";
+      payload: {
     url: string;
     method: string;
     headers?: Record<string, string>;
@@ -113,6 +125,16 @@ export type CommandMessage = {
      * reconstructs a FormData (re-reading files from their local uri) and
      * ignores `body`.
      */
-    formParts?: FormDataPart[];
-  };
-};
+        formParts?: FormDataPart[];
+      };
+    }
+  | {
+      type: "command";
+      command: "request_file";
+      payload: { transferId: string; uri: string; fileName?: string; mimeType?: string; maxBytes: number };
+    }
+  | {
+      type: "command";
+      command: "open_file";
+      payload: { transferId: string; uri: string };
+    };

@@ -25,6 +25,14 @@
 - 📎 **File uploads** - `multipart/form-data` bodies are broken down per field, with each file's name, type, size and local uri
 - 🔧 **Custom axios instances** - Support for multiple instances
 
+### Multipart/FormData Inspector
+
+![Rexpo Debugger FormData Inspector](https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/screenshots/dark-formdata.png)
+
+See every multipart field and uploaded file's name, MIME type, size and
+device-local URI. Bytes transfer only after an explicit Preview or Save action,
+with a hard 5 MB limit.
+
 ### Console Monitoring (NEW! 🎉)
 - 📋 **All console methods** - log, warn, error, info, debug
 - 🎨 **Color-coded levels** - Visual distinction for each log type
@@ -267,8 +275,8 @@ Binary or stream-based content cannot be displayed. The agent only shows text-ba
 
 `multipart/form-data` uploads are the exception: the inspector lists every field
 and, for each uploaded file, its field name, file name, mime type, size and
-local `file://` uri. File contents stay on the device — only that metadata is
-sent to the desktop app.
+local `file://` uri. Only metadata is sent automatically; bytes transfer after
+an explicit Preview or Save action and are limited to 5 MB.
 
 ## 🤝 Contributing
 

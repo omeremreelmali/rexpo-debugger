@@ -545,8 +545,9 @@ If you don't want a native rebuild, switch to manual `wsUrl` instead.
 
 **`multipart/form-data` uploads** are the exception: the Request tab lists every
 field, and for each uploaded file its field name, file name, mime type, size and
-local `file://` uri. The file *contents* stay on the device — only that metadata
-is sent to the desktop app. Replay and **Edit & Replay** rebuild the FormData on
+local `file://` uri. By default only metadata is sent; bytes transfer on demand
+when you choose **Preview** or **Save to Desktop**, with a hard 5 MB limit.
+Replay and **Edit & Replay** rebuild the FormData on
 the device, so an upload only replays while the file still exists at that uri
 (picker temp files are cleaned up by the OS eventually). "Copy as cURL" turns the
 parts into `-F` flags, with file paths pointing at the device-local path.

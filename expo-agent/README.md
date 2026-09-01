@@ -35,6 +35,10 @@ Professional debugging tool for Expo and React Native apps. Inspect network traf
 
 ## 📸 Take the tour
 
+**FormData Inspector** — inspect multipart fields, preview images/PDFs, save files to desktop, or open the original on device. Bytes transfer only on demand, up to 5 MB.
+
+<img width="1400" alt="FormData Inspector — multipart fields and file metadata" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/screenshots/dark-formdata.png">
+
 **Collections** — save any captured request into a named project and replay it whenever you want.
 
 <img width="1400" alt="Collections tab — saved requests grouped by project" src="https://raw.githubusercontent.com/omeremreelmali/rexpo-debugger/main/assets/screenshots/dark-collections.png">

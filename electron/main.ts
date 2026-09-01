@@ -223,6 +223,8 @@ function attachWebSocketListeners(server: WebSocketServer) {
           // never sees them; everything else stays on "network-message".
           if (message?.type === "state") {
             mainWindow.webContents.send("state-message", message);
+          } else if (message?.type === "file_transfer") {
+            mainWindow.webContents.send("file-transfer-message", message);
           } else {
             mainWindow.webContents.send("network-message", message);
           }
@@ -413,6 +415,30 @@ function registerIpcHandlers() {
           filePath: result.filePath,
           fileName: path.basename(result.filePath),
         };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    "save-binary-file",
+    async (
+      _event,
+      payload: { defaultName: string; base64: string; mimeType?: string }
+    ): Promise<{ ok: boolean; cancelled?: boolean; filePath?: string; error?: string }> => {
+      if (!mainWindow || mainWindow.isDestroyed()) return { ok: false, error: "No active window" };
+      if (payload.base64.length > 7_000_000) return { ok: false, error: "File exceeds the 5 MB transfer limit" };
+      try {
+        const extension = path.extname(payload.defaultName).slice(1);
+        const result = await dialog.showSaveDialog(mainWindow, {
+          title: "Save uploaded file",
+          defaultPath: payload.defaultName,
+          filters: [{ name: payload.mimeType || "File", extensions: [extension || "*"] }],
+        });
+        if (result.canceled || !result.filePath) return { ok: false, cancelled: true };
+        await fs.promises.writeFile(result.filePath, Buffer.from(payload.base64, "base64"));
+        return { ok: true, filePath: result.filePath };
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };
       }

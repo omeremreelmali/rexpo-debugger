@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App";
-import { ConnectionInfo } from "./types";
+import { ConnectionInfo, FileTransferMessage } from "./types";
 import "./App.css";
 
 // Type augmentation for window.electron
@@ -27,6 +27,11 @@ declare global {
         fileName?: string;
         error?: string;
       }>;
+      saveBinaryFile: (payload: { defaultName: string; base64: string; mimeType?: string }) => Promise<{
+        ok: boolean; cancelled?: boolean; filePath?: string; error?: string;
+      }>;
+      onFileTransfer: (callback: (message: FileTransferMessage) => void) => void;
+      removeFileTransferListener: () => void;
       onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
       removeConnectionStateListener: () => void;
       onSessionStarted: (callback: () => void) => void;
@@ -71,4 +76,3 @@ root.render(
     <App />
   </React.StrictMode>
 );
-

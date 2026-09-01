@@ -1,4 +1,5 @@
-import { FormDataPart } from "../types";
+import { useEffect, useRef, useState } from "react";
+import { FileTransferMessage, FormDataPart } from "../types";
 import "./FormDataViewer.css";
 
 /** Human-readable byte count. Sizes are only known when the platform reports them. */
@@ -13,16 +14,83 @@ interface FormDataViewerProps {
   parts: FormDataPart[];
 }
 
+type FileAction = "preview" | "save" | "open";
+type FileUiState = { loading?: FileAction; previewUrl?: string; mimeType?: string; message?: string; error?: string };
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
 /**
  * Renders a captured `multipart/form-data` body: one row per field, with file
  * parts showing their name, mime type, size and device-local uri.
  *
- * File contents are never transferred — only the metadata the app passed to
- * `FormData.append()`.
+ * File bytes transfer only after an explicit Preview or Save action, with a
+ * hard 5 MB limit enforced on both agent and desktop.
  */
 export function FormDataViewer({ parts }: FormDataViewerProps) {
+  const [fileStates, setFileStates] = useState<Record<number, FileUiState>>({});
+  const pending = useRef(new Map<string, { index: number; action: FileAction }>());
   const fileCount = parts.filter((part) => part.kind === "file").length;
   const textCount = parts.length - fileCount;
+
+  useEffect(() => {
+    window.electron.onFileTransfer((message: FileTransferMessage) => {
+      const request = pending.current.get(message.transferId);
+      if (!request) return;
+      pending.current.delete(message.transferId);
+      const { index, action } = request;
+
+      if (message.status === "error") {
+        setFileStates((current) => ({ ...current, [index]: { error: message.error || "File operation failed" } }));
+        return;
+      }
+      if (message.status === "opened") {
+        setFileStates((current) => ({ ...current, [index]: { message: "Opened on device" } }));
+        return;
+      }
+      if (!message.base64) return;
+
+      if (action === "save") {
+        void window.electron.saveBinaryFile({
+          defaultName: message.fileName || parts[index]?.fileName || "upload.bin",
+          base64: message.base64,
+          mimeType: message.mimeType,
+        }).then((result) => {
+          setFileStates((current) => ({
+            ...current,
+            [index]: result.ok
+              ? { message: `Saved to ${result.filePath}` }
+              : result.cancelled ? {} : { error: result.error || "Save failed" },
+          }));
+        });
+      } else {
+        const mimeType = message.mimeType || "application/octet-stream";
+        setFileStates((current) => ({
+          ...current,
+          [index]: { previewUrl: `data:${mimeType};base64,${message.base64}`, mimeType },
+        }));
+      }
+    });
+    return () => window.electron.removeFileTransferListener();
+  }, [parts]);
+
+  const runFileAction = (part: FormDataPart, index: number, action: FileAction) => {
+    if (!part.uri) return;
+    const transferId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    pending.current.set(transferId, { index, action });
+    setFileStates((current) => ({ ...current, [index]: { loading: action } }));
+    window.electron.sendCommand({
+      type: "command",
+      command: action === "open" ? "open_file" : "request_file",
+      payload: action === "open"
+        ? { transferId, uri: part.uri! }
+        : {
+            transferId,
+            uri: part.uri!,
+            fileName: part.fileName,
+            mimeType: part.mimeType,
+            maxBytes: MAX_FILE_BYTES,
+          },
+    });
+  };
 
   return (
     <div className="formdata-viewer">
@@ -36,7 +104,9 @@ export function FormDataViewer({ parts }: FormDataViewerProps) {
       </div>
 
       <div className="formdata-list">
-        {parts.map((part, index) => (
+        {parts.map((part, index) => {
+          const fileState = fileStates[index] || {};
+          return (
           <div
             key={`${part.name}-${index}`}
             className={`formdata-row formdata-row-${part.kind}`}
@@ -66,17 +136,39 @@ export function FormDataViewer({ parts }: FormDataViewerProps) {
                     {part.uri}
                   </div>
                 )}
+                {part.uri && (
+                  <div className="formdata-actions">
+                    <button type="button" onClick={() => runFileAction(part, index, "preview")} disabled={!!fileState.loading}>
+                      {fileState.loading === "preview" ? "Loading…" : "Preview"}
+                    </button>
+                    <button type="button" onClick={() => runFileAction(part, index, "save")} disabled={!!fileState.loading}>
+                      {fileState.loading === "save" ? "Transferring…" : "Save to Desktop"}
+                    </button>
+                    <button type="button" onClick={() => runFileAction(part, index, "open")} disabled={!!fileState.loading}>
+                      {fileState.loading === "open" ? "Opening…" : "Open on Device"}
+                    </button>
+                  </div>
+                )}
+                {fileState.error && <div className="formdata-file-error">{fileState.error}</div>}
+                {fileState.message && <div className="formdata-file-message">{fileState.message}</div>}
+                {fileState.previewUrl && fileState.mimeType?.startsWith("image/") && (
+                  <img className="formdata-preview-image" src={fileState.previewUrl} alt={part.fileName || part.name} />
+                )}
+                {fileState.previewUrl && fileState.mimeType === "application/pdf" && (
+                  <iframe className="formdata-preview-pdf" src={fileState.previewUrl} title={part.fileName || part.name} />
+                )}
               </div>
             ) : (
               <pre className="formdata-value">{part.value ?? ""}</pre>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {fileCount > 0 && (
         <p className="formdata-note">
-          File contents stay on the device — only metadata is captured.
+          Files transfer only when you choose Preview or Save to Desktop (5 MB limit).
         </p>
       )}
     </div>

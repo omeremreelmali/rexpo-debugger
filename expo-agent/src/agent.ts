@@ -92,6 +92,18 @@ let healthCheckInterval: any = null;
 let maxBodyLength = Infinity;
 let debugMode = false;
 let interceptedFetch: typeof fetch;
+let nativeFetch: typeof fetch;
+
+type FileTransferMessage = {
+  type: "file_transfer";
+  transferId: string;
+  status: "content" | "opened" | "error";
+  fileName?: string;
+  mimeType?: string;
+  size?: number;
+  base64?: string;
+  error?: string;
+};
 
 // ─── Reconnect state ──────────────────────────────────────────────────────
 type ReconnectStrategy =
@@ -241,7 +253,7 @@ function connectSocket(wsUrl: string) {
       debugLog("[NetworkAgent] 🔍 Current socket state:", socket?.readyState);
     };
 
-    socket.onmessage = (event) => {
+    socket.onmessage = async (event) => {
       try {
         const dataStr = typeof event.data === "string" ? event.data : event.data.toString();
         const message = JSON.parse(dataStr);
@@ -279,6 +291,10 @@ function connectSocket(wsUrl: string) {
           } else {
             errorLog("[NetworkAgent] ❌ Intercepted fetch is not ready yet.");
           }
+        } else if (message.type === "command" && message.command === "request_file") {
+          await handleFileRequest(message.payload);
+        } else if (message.type === "command" && message.command === "open_file") {
+          await handleOpenFile(message.payload);
         }
       } catch (e) {
         errorLog("[NetworkAgent] ❌ Failed to parse incoming message:", e);
@@ -305,6 +321,81 @@ function connectSocket(wsUrl: string) {
   } catch (error) {
     errorLog("[NetworkAgent] ❌ Failed to create WebSocket:", error);
     scheduleReconnect();
+  }
+}
+
+const ABSOLUTE_MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+function sendFileTransfer(message: FileTransferMessage) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  socket.send(JSON.stringify(message));
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error || new Error("Failed to read file"));
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      resolve(result.includes(",") ? result.slice(result.indexOf(",") + 1) : result);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function handleFileRequest(payload: {
+  transferId: string;
+  uri: string;
+  fileName?: string;
+  mimeType?: string;
+  maxBytes?: number;
+}) {
+  const maxBytes = Math.min(
+    Math.max(1, Number(payload.maxBytes) || ABSOLUTE_MAX_FILE_BYTES),
+    ABSOLUTE_MAX_FILE_BYTES
+  );
+  try {
+    const readFetch = nativeFetch || global.fetch;
+    const response = await readFetch(payload.uri);
+    if (!response.ok) throw new Error(`Unable to read file (${response.status})`);
+    const blob = await response.blob();
+    if (blob.size > maxBytes) {
+      throw new Error(`File is ${(blob.size / 1024 / 1024).toFixed(2)} MB; limit is ${(maxBytes / 1024 / 1024).toFixed(0)} MB`);
+    }
+    const base64 = await blobToBase64(blob);
+    sendFileTransfer({
+      type: "file_transfer",
+      transferId: payload.transferId,
+      status: "content",
+      fileName: payload.fileName,
+      mimeType: payload.mimeType || blob.type || "application/octet-stream",
+      size: blob.size,
+      base64,
+    });
+  } catch (err) {
+    sendFileTransfer({
+      type: "file_transfer",
+      transferId: payload.transferId,
+      status: "error",
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+async function handleOpenFile(payload: { transferId: string; uri: string }) {
+  try {
+    // React Native is a peer dependency; dynamic loading keeps non-RN builds safe.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Linking } = require("react-native");
+    await Linking.openURL(payload.uri);
+    sendFileTransfer({ type: "file_transfer", transferId: payload.transferId, status: "opened" });
+  } catch (err) {
+    sendFileTransfer({
+      type: "file_transfer",
+      transferId: payload.transferId,
+      status: "error",
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -368,6 +459,7 @@ export function initNetworkAgent(options: InitOptions = {}) {
 
   // Override global.fetch
   const originalFetch = global.fetch;
+  nativeFetch = originalFetch;
 
   interceptedFetch = async (input: any, init?: any): Promise<Response> => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;

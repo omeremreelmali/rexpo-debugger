@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-09-01
+
+### ✨ Added — safe file preview and actions
+
+Agent (`rexpo-debugger` 1.5.0):
+
+- File bytes are read only after an explicit Preview or Save action and are
+  rejected above a hard 5 MB limit.
+- `Open on Device` uses React Native's native URL handling to open the
+  original device-local file.
+
+Desktop (1.8.0):
+
+- Image and PDF previews for captured multipart file parts.
+- Native `Save to Desktop` dialog for user-requested file transfers.
+- Per-file loading, success and error feedback.
+- New dark and light FormData Inspector screenshots on the website and npm.
+
 ## [1.4.0] - 2026-08-27
 
 ### ✨ Added — multipart/form-data visibility
