@@ -24,6 +24,10 @@ A professional debugging tool similar to **Flipper** and **Chrome DevTools** for
 - 📦 **Fetch & Axios support**: Automatically captures both HTTP clients
 - 🔎 **Advanced filtering**: Filter by method, status code, and URL
 - 📊 **Detailed analysis**: Headers, request/response body, timing information
+- 🔁 **Request replay**: Re-send captured requests or edit method, URL, query parameters, headers, and body first
+- 🧩 **Multipart/FormData inspector**: Inspect fields and file metadata, preview images/PDFs, save files to desktop, or save and open them locally (on-demand, 5 MB limit)
+- ✈️ **OPTIONS / preflight support**: Capture and identify CORS preflight requests correctly
+- ↔️ **Resizable panels**: Adjust the request list and detail widths; the layout persists across restarts
 
 <img width="1400" alt="Rexpo Debugger" src="./assets/debug-console-screenshot.png">
 
@@ -50,6 +54,13 @@ A professional debugging tool similar to **Flipper** and **Chrome DevTools** for
 - ⚡ **One-click Replay** from the saved entry, or **Edit & Replay…** to tweak before sending
 - 📝 Rename, move between collections, delete — full lifecycle from the right-click menu
 - 💾 Persisted in `localStorage` — survives app restarts
+
+### State Inspection
+
+- 🌳 **Live state tree**: Inspect Redux, Zustand, or any compatible store in a searchable tree
+- 🔌 **Generic adapter**: Connect Valtio, MobX, Jotai, XState, Effector, and other stores with `attachStore()`
+- 🛡️ **Safe serialization**: Functions, Maps/Sets, Dates, and circular references are represented without breaking the bridge
+- 👁️ **View-only by design for now**: State write-back remains on the roadmap
 
 ### Settings (NEW)
 
@@ -319,6 +330,8 @@ Open your application on a physical device or emulator. Network requests will au
 
 - **Network Tab** 🌐: View all HTTP requests (fetch & axios)
 - **Console Tab** 📋: View all console logs
+- **Collections Tab** 📚: Organize and replay saved requests
+- **State Tab** 🌳: Inspect connected application stores live
 
 ### Network Tab
 
@@ -351,7 +364,7 @@ Open your application on a physical device or emulator. Network requests will au
 - **Status Filter**: Filter by status code (Network)
 - **Level Filter**: Filter by log level (Console)
 - **Pause**: Temporarily stop capturing new data
-- **Clear**: Delete all captured data
+- **Separate clear actions**: Clear Network requests or Console logs independently
 
 ## 🔧 Configuration
 
@@ -560,54 +573,33 @@ parts into `-F` flags, with file paths pointing at the device-local path.
 - **iOS Simulator** (manual mode): `localhost` or your computer's IP address should work
 - Auto-discovery works on simulators too, but mDNS on Android emulators is unreliable on some host setups — manual `wsUrl` is more dependable there
 
-## 🚀 Future Features
+## 🚀 Roadmap
 
 ### Network
 
 - [ ] XMLHttpRequest support
 - [ ] WebSocket traffic monitoring
 - [ ] GraphQL query/mutation visualization
-- [x] ✅ Request replay feature
-- [x] ✅ **Edit & Replay** — modify method / URL / **query params** / headers / body before re-sending
-- [x] ✅ Right-click context menu (copy URL, cURL, JSON, replay, **save response to file**, **save to collection**, delete)
-- [x] ✅ Toast feedback for copy / save actions
-- [x] ✅ **Collections** — saved requests grouped by project, with optional name / tags / description
 - [ ] Mock response feature
 
 ### Discovery & Connection
 
-- [x] ✅ mDNS / Bonjour auto-discovery
-- [x] ✅ Live IP detection + copy chip in desktop header
-- [x] ✅ Expo config plugin (permissions auto-inject)
-- [x] ✅ Network change re-publish
-- [x] ✅ Manuel host:port override (overrides auto-detect)
-- [x] ✅ Auto-detect (mDNS) toggle
-- [x] ✅ **Auto-reconnect** with exponential backoff (port change / desktop restart / Wi-Fi blip)
 - [ ] QR code pairing (mDNS fallback for blocked networks)
-
-### Settings & UX
-
-- [x] ✅ Settings modal with localStorage persistence
-- [x] ✅ Auto-clear panels on agent reconnect
-- [x] ✅ Independent Network / Console agent toggles
-- [x] ✅ Max history limits (FIFO trim)
-- [x] ✅ Default log level
-- [x] ✅ Full light / dark / system theme (CSS variable architecture)
-- [x] ✅ Network port live-restart from Settings (bind-first safety, mDNS re-publish)
 
 ### Console
 
-- [x] ✅ Console log monitoring (COMPLETED!)
 - [ ] Advanced log formatting (React components, etc.)
 - [ ] Log export feature
 
-### General
+### State
+
+- [ ] State write-back / editing
+- [ ] State history and time travel
+
+### Import, Export & Performance
 
 - [ ] Export/Import feature (HAR format for network, JSON for console)
-- [ ] Dark/Light theme toggle
-- [ ] Automatic reconnect logic
 - [ ] Performance metrics
-- [ ] Redux/Zustand state monitoring
 
 ## 📄 License
 
