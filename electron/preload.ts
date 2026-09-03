@@ -39,12 +39,13 @@ contextBridge.exposeInMainWorld("electron", {
     fileName?: string;
     error?: string;
   }> => ipcRenderer.invoke("save-response-to-file", payload),
-  saveBinaryFile: (payload: { defaultName: string; base64: string; mimeType?: string }) =>
+  saveBinaryFile: (payload: { defaultName: string; base64: string; mimeType?: string; openAfterSave?: boolean }) =>
     ipcRenderer.invoke("save-binary-file", payload),
   onFileTransfer: (callback: (message: FileTransferMessage) => void) => {
-    ipcRenderer.on("file-transfer-message", (_event, message: FileTransferMessage) => callback(message));
+    const listener = (_event: Electron.IpcRendererEvent, message: FileTransferMessage) => callback(message);
+    ipcRenderer.on("file-transfer-message", listener);
+    return () => ipcRenderer.removeListener("file-transfer-message", listener);
   },
-  removeFileTransferListener: () => ipcRenderer.removeAllListeners("file-transfer-message"),
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => {
     ipcRenderer.on("connection-state-changed", (_event, info: ConnectionInfo) => {
       callback(info);
@@ -90,11 +91,10 @@ export interface ElectronAPI {
     fileName?: string;
     error?: string;
   }>;
-  saveBinaryFile: (payload: { defaultName: string; base64: string; mimeType?: string }) => Promise<{
+  saveBinaryFile: (payload: { defaultName: string; base64: string; mimeType?: string; openAfterSave?: boolean }) => Promise<{
     ok: boolean; cancelled?: boolean; filePath?: string; error?: string;
   }>;
-  onFileTransfer: (callback: (message: FileTransferMessage) => void) => void;
-  removeFileTransferListener: () => void;
+  onFileTransfer: (callback: (message: FileTransferMessage) => void) => () => void;
   onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
   removeConnectionStateListener: () => void;
   onSessionStarted: (callback: () => void) => void;

@@ -12,6 +12,8 @@ function formatBytes(bytes?: number): string | null {
 
 interface FormDataViewerProps {
   parts: FormDataPart[];
+  /** Route file actions back to the agent that originally captured the request. */
+  sourceClientId?: string;
 }
 
 type FileAction = "preview" | "save" | "open";
@@ -22,17 +24,17 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
  * Renders a captured `multipart/form-data` body: one row per field, with file
  * parts showing their name, mime type, size and device-local uri.
  *
- * File bytes transfer only after an explicit Preview or Save action, with a
- * hard 5 MB limit enforced on both agent and desktop.
+ * File bytes transfer only after an explicit Preview, Save or Open action,
+ * with a hard 5 MB limit enforced on both agent and desktop.
  */
-export function FormDataViewer({ parts }: FormDataViewerProps) {
+export function FormDataViewer({ parts, sourceClientId }: FormDataViewerProps) {
   const [fileStates, setFileStates] = useState<Record<number, FileUiState>>({});
   const pending = useRef(new Map<string, { index: number; action: FileAction }>());
   const fileCount = parts.filter((part) => part.kind === "file").length;
   const textCount = parts.length - fileCount;
 
   useEffect(() => {
-    window.electron.onFileTransfer((message: FileTransferMessage) => {
+    const unsubscribe = window.electron.onFileTransfer((message: FileTransferMessage) => {
       const request = pending.current.get(message.transferId);
       if (!request) return;
       pending.current.delete(message.transferId);
@@ -42,22 +44,22 @@ export function FormDataViewer({ parts }: FormDataViewerProps) {
         setFileStates((current) => ({ ...current, [index]: { error: message.error || "File operation failed" } }));
         return;
       }
-      if (message.status === "opened") {
-        setFileStates((current) => ({ ...current, [index]: { message: "Opened on device" } }));
-        return;
-      }
+      // Kept for compatibility with older agents. Current desktop file actions
+      // always request the bytes and open them locally.
+      if (message.status === "opened") return;
       if (!message.base64) return;
 
-      if (action === "save") {
+      if (action === "save" || action === "open") {
         void window.electron.saveBinaryFile({
           defaultName: message.fileName || parts[index]?.fileName || "upload.bin",
           base64: message.base64,
           mimeType: message.mimeType,
+          openAfterSave: action === "open",
         }).then((result) => {
           setFileStates((current) => ({
             ...current,
             [index]: result.ok
-              ? { message: `Saved to ${result.filePath}` }
+              ? { message: action === "open" ? `Opened ${result.filePath}` : `Saved to ${result.filePath}` }
               : result.cancelled ? {} : { error: result.error || "Save failed" },
           }));
         });
@@ -69,7 +71,7 @@ export function FormDataViewer({ parts }: FormDataViewerProps) {
         }));
       }
     });
-    return () => window.electron.removeFileTransferListener();
+    return unsubscribe;
   }, [parts]);
 
   const runFileAction = (part: FormDataPart, index: number, action: FileAction) => {
@@ -79,16 +81,15 @@ export function FormDataViewer({ parts }: FormDataViewerProps) {
     setFileStates((current) => ({ ...current, [index]: { loading: action } }));
     window.electron.sendCommand({
       type: "command",
-      command: action === "open" ? "open_file" : "request_file",
-      payload: action === "open"
-        ? { transferId, uri: part.uri! }
-        : {
-            transferId,
-            uri: part.uri!,
-            fileName: part.fileName,
-            mimeType: part.mimeType,
-            maxBytes: MAX_FILE_BYTES,
-          },
+      command: "request_file",
+      targetClientId: sourceClientId,
+      payload: {
+        transferId,
+        uri: part.uri!,
+        fileName: part.fileName,
+        mimeType: part.mimeType,
+        maxBytes: MAX_FILE_BYTES,
+      },
     });
   };
 
@@ -145,7 +146,7 @@ export function FormDataViewer({ parts }: FormDataViewerProps) {
                       {fileState.loading === "save" ? "Transferring…" : "Save to Desktop"}
                     </button>
                     <button type="button" onClick={() => runFileAction(part, index, "open")} disabled={!!fileState.loading}>
-                      {fileState.loading === "open" ? "Opening…" : "Open on Device"}
+                      {fileState.loading === "open" ? "Transferring…" : "Open on Device"}
                     </button>
                   </div>
                 )}
@@ -168,7 +169,7 @@ export function FormDataViewer({ parts }: FormDataViewerProps) {
 
       {fileCount > 0 && (
         <p className="formdata-note">
-          Files transfer only when you choose Preview or Save to Desktop (5 MB limit).
+          Files transfer only when you choose Preview, Save to Desktop or Open on Device (5 MB limit).
         </p>
       )}
     </div>

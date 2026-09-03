@@ -86,7 +86,9 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
       }
 
       // Handle network messages
-      const existingIndex = state.requests.findIndex((r) => r.id === message.id);
+      const existingIndex = state.requests.findIndex(
+        (r) => r.id === message.id && r.sourceClientId === message.sourceClientId
+      );
 
       if (message.type === "request") {
         if (existingIndex >= 0) {
@@ -94,6 +96,7 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
           const updated = [...state.requests];
           updated[existingIndex] = {
             ...updated[existingIndex],
+            sourceClientId: message.sourceClientId,
             url: message.url,
             method: message.method,
             requestHeaders: message.requestHeaders,
@@ -107,6 +110,7 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
           // Add new request
           const newRequest: RequestState = {
             id: message.id,
+            sourceClientId: message.sourceClientId,
             url: message.url,
             method: message.method,
             requestHeaders: message.requestHeaders,
@@ -130,6 +134,7 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
           const updated = [...state.requests];
           updated[existingIndex] = {
             ...updated[existingIndex],
+            sourceClientId: message.sourceClientId,
             status: message.status,
             statusText: message.statusText,
             responseHeaders: message.responseHeaders,
@@ -144,6 +149,7 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
           // Response arrived before request (edge case)
           const newRequest: RequestState = {
             id: message.id,
+            sourceClientId: message.sourceClientId,
             url: message.url,
             method: "UNKNOWN",
             status: message.status,
@@ -307,4 +313,3 @@ export function useNetwork() {
   }
   return context;
 }
-

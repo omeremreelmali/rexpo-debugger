@@ -16,11 +16,12 @@ export interface ReplayPayload {
  * Sends a replay command to the agent. Falls back to no-op if the Electron
  * bridge is not available (e.g. running renderer outside Electron during tests).
  */
-export function sendReplayCommand(payload: ReplayPayload): void {
+export function sendReplayCommand(payload: ReplayPayload, targetClientId?: string): void {
   if (!window.electron?.sendCommand) return;
   window.electron.sendCommand({
     type: "command",
     command: "replay_request",
+    targetClientId,
     payload,
   });
 }
@@ -40,5 +41,5 @@ export function replayRequest(request: RequestState): void {
     headers: request.requestHeaders,
     body: formParts?.length ? undefined : request.requestBodySnippet,
     formParts: formParts?.length ? formParts : undefined,
-  });
+  }, request.sourceClientId);
 }

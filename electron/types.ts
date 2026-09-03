@@ -26,6 +26,8 @@ export interface FormDataPart {
 export type NetworkMessage =
   | {
       type: "request";
+      /** Desktop-assigned id of the agent connection that emitted this request. */
+      sourceClientId?: string;
       id: string;
       url: string;
       method: string;
@@ -38,6 +40,8 @@ export type NetworkMessage =
     }
   | {
       type: "response";
+      /** Desktop-assigned id of the agent connection that emitted this response. */
+      sourceClientId?: string;
       id: string;
       url: string;
       status: number;
@@ -60,6 +64,7 @@ export type NetworkMessage =
 
 export interface RequestState {
   id: string;
+  sourceClientId?: string;
   url: string;
   method: string;
   status?: number;
@@ -132,6 +137,7 @@ export type CommandMessage =
   | {
       type: "command";
       command: "replay_request";
+      targetClientId?: string;
       payload: {
     url: string;
     method: string;
@@ -148,10 +154,12 @@ export type CommandMessage =
   | {
       type: "command";
       command: "request_file";
+      targetClientId?: string;
       payload: { transferId: string; uri: string; fileName?: string; mimeType?: string; maxBytes: number };
     }
   | {
       type: "command";
       command: "open_file";
+      targetClientId?: string;
       payload: { transferId: string; uri: string };
     };

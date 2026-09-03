@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import * as path from "path";
 import * as os from "os";
 import * as fs from "fs";
@@ -20,6 +20,8 @@ let bonjour: Bonjour | null = null;
 let publishedService: Service | null = null;
 let lastInterfaceSignature = "";
 let networkPollTimer: NodeJS.Timeout | null = null;
+let nextClientId = 0;
+const clientIds = new WeakMap<WebSocket, string>();
 
 function getLocalIPv4Addresses(): NetworkInterfaceInfo[] {
   const interfaces = os.networkInterfaces();
@@ -204,6 +206,8 @@ function createWindow() {
  */
 function attachWebSocketListeners(server: WebSocketServer) {
   server.on("connection", (ws: WebSocket) => {
+    const clientId = `client-${Date.now()}-${++nextClientId}`;
+    clientIds.set(ws, clientId);
     console.log(`[Inspector] Client connected (total: ${server.clients.size})`);
     broadcastConnectionState();
 
@@ -216,7 +220,10 @@ function attachWebSocketListeners(server: WebSocketServer) {
 
     ws.on("message", (data: Buffer) => {
       try {
-        const message = JSON.parse(data.toString()) as { type?: string };
+        const message = JSON.parse(data.toString()) as { type?: string; sourceClientId?: string };
+        // The connection identity is trusted only from the desktop socket,
+        // never from agent-provided JSON.
+        message.sourceClientId = clientId;
 
         if (mainWindow && !mainWindow.isDestroyed()) {
           // State snapshots ride a dedicated channel so the network reducer
@@ -364,7 +371,10 @@ function registerIpcHandlers() {
   ipcMain.on("send-command", (_event, command: CommandMessage) => {
     if (wss) {
       wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
+        if (
+          client.readyState === WebSocket.OPEN &&
+          (!command.targetClientId || clientIds.get(client) === command.targetClientId)
+        ) {
           client.send(JSON.stringify(command));
         }
       });
@@ -425,19 +435,25 @@ function registerIpcHandlers() {
     "save-binary-file",
     async (
       _event,
-      payload: { defaultName: string; base64: string; mimeType?: string }
+      payload: { defaultName: string; base64: string; mimeType?: string; openAfterSave?: boolean }
     ): Promise<{ ok: boolean; cancelled?: boolean; filePath?: string; error?: string }> => {
       if (!mainWindow || mainWindow.isDestroyed()) return { ok: false, error: "No active window" };
       if (payload.base64.length > 7_000_000) return { ok: false, error: "File exceeds the 5 MB transfer limit" };
       try {
         const extension = path.extname(payload.defaultName).slice(1);
         const result = await dialog.showSaveDialog(mainWindow, {
-          title: "Save uploaded file",
+          title: payload.openAfterSave ? "Save and open uploaded file" : "Save uploaded file",
           defaultPath: payload.defaultName,
           filters: [{ name: payload.mimeType || "File", extensions: [extension || "*"] }],
         });
         if (result.canceled || !result.filePath) return { ok: false, cancelled: true };
         await fs.promises.writeFile(result.filePath, Buffer.from(payload.base64, "base64"));
+        if (payload.openAfterSave) {
+          const openError = await shell.openPath(result.filePath);
+          if (openError) {
+            return { ok: false, filePath: result.filePath, error: openError };
+          }
+        }
         return { ok: true, filePath: result.filePath };
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };

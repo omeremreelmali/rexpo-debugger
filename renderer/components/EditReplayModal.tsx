@@ -232,13 +232,16 @@ export function EditReplayModal({
 
   const handleSend = () => {
     const sendsFormData = hasBody && isMultipart;
-    sendReplayCommand({
-      url: resolvedUrl,
-      method,
-      headers: rowsToHeaders(headers),
-      body: hasBody && !sendsFormData ? body : undefined,
-      formParts: sendsFormData ? formParts : undefined,
-    });
+    sendReplayCommand(
+      {
+        url: resolvedUrl,
+        method,
+        headers: rowsToHeaders(headers),
+        body: hasBody && !sendsFormData ? body : undefined,
+        formParts: sendsFormData ? formParts : undefined,
+      },
+      request.sourceClientId
+    );
     onClose();
   };
 
@@ -464,7 +467,7 @@ export function EditReplayModal({
               <header className="edit-replay-section-header">
                 <h3>Body</h3>
               </header>
-              <FormDataViewer parts={formParts!} />
+              <FormDataViewer parts={formParts!} sourceClientId={request.sourceClientId} />
               <p className="edit-replay-body-hint">
                 Multipart parts are replayed exactly as captured — files are
                 re-read on the device from their local uri.

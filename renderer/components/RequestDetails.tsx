@@ -226,7 +226,10 @@ export function RequestDetails() {
           <div className="details-section">
             <h3>Request Body</h3>
             {selectedRequest.requestFormParts?.length ? (
-              <FormDataViewer parts={selectedRequest.requestFormParts} />
+              <FormDataViewer
+                parts={selectedRequest.requestFormParts}
+                sourceClientId={selectedRequest.sourceClientId}
+              />
             ) : selectedRequest.requestBodySnippet ? (
               isJson(selectedRequest.requestBodySnippet) ? (
                 <JsonViewer data={selectedRequest.requestBodySnippet} />

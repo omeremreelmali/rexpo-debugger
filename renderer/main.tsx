@@ -27,11 +27,10 @@ declare global {
         fileName?: string;
         error?: string;
       }>;
-      saveBinaryFile: (payload: { defaultName: string; base64: string; mimeType?: string }) => Promise<{
+      saveBinaryFile: (payload: { defaultName: string; base64: string; mimeType?: string; openAfterSave?: boolean }) => Promise<{
         ok: boolean; cancelled?: boolean; filePath?: string; error?: string;
       }>;
-      onFileTransfer: (callback: (message: FileTransferMessage) => void) => void;
-      removeFileTransferListener: () => void;
+      onFileTransfer: (callback: (message: FileTransferMessage) => void) => () => void;
       onConnectionStateChanged: (callback: (info: ConnectionInfo) => void) => void;
       removeConnectionStateListener: () => void;
       onSessionStarted: (callback: () => void) => void;
