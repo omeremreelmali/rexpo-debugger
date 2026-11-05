@@ -5,6 +5,7 @@ import { useCollections } from "../state/CollectionsContext";
 import { useToast } from "./Toast";
 import { SaveRequestModal } from "./SaveRequestModal";
 import { FormDataViewer } from "./FormDataViewer";
+import { Icon } from "./Icons";
 import "./EditReplayModal.css";
 
 interface EditReplayModalProps {
@@ -295,7 +296,7 @@ export function EditReplayModal({
             </p>
           </div>
           <button className="edit-replay-close" onClick={onClose} aria-label="Close" type="button">
-            ✕
+            <Icon name="x" />
           </button>
         </header>
 
@@ -384,7 +385,7 @@ export function EditReplayModal({
                       onClick={() => removeQueryParam(p.id)}
                       title="Remove"
                     >
-                      ✕
+                      <Icon name="x" />
                     </button>
                   </div>
                 ))}
@@ -443,7 +444,7 @@ export function EditReplayModal({
                           onClick={() => toggleReveal(h.id)}
                           title={revealed ? "Hide" : "Show"}
                         >
-                          {revealed ? "🙈" : "👁"}
+                          <Icon name={revealed ? "eyeOff" : "eye"} />
                         </button>
                       )}
                       <button
@@ -452,7 +453,7 @@ export function EditReplayModal({
                         onClick={() => removeHeader(h.id)}
                         title="Remove"
                       >
-                        ✕
+                        <Icon name="x" />
                       </button>
                     </div>
                   );
@@ -501,7 +502,7 @@ export function EditReplayModal({
               />
               {body.trim() && looksLikeJson(body) && !bodyValidation.isJson && (
                 <p className="edit-replay-body-error">
-                  ⚠ Invalid JSON: {bodyValidation.error}
+                  Invalid JSON: {bodyValidation.error}
                 </p>
               )}
             </section>
@@ -520,7 +521,7 @@ export function EditReplayModal({
               disabled={!canSend}
               title={canSend ? "Save as a new request" : "URL is empty"}
             >
-              💾 Save as new…
+              <Icon name="download" /> Save as new…
             </button>
             {savedRequestId && (
               <button
@@ -530,7 +531,7 @@ export function EditReplayModal({
                 disabled={!canSend}
                 title={canSend ? "Overwrite the saved request" : "URL is empty"}
               >
-                ✔ Save changes
+                <Icon name="check" /> Save changes
               </button>
             )}
             <button
@@ -546,7 +547,7 @@ export function EditReplayModal({
                   : "Send"
               }
             >
-              ▶ Send
+              <Icon name="play" /> Send
             </button>
           </div>
         </footer>

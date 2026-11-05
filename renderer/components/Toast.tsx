@@ -1,12 +1,14 @@
 import {
   createContext,
   ReactNode,
+  type CSSProperties,
   useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
 } from "react";
+import { Icon } from "./Icons";
 import "./Toast.css";
 
 export type ToastVariant = "success" | "error" | "info";
@@ -16,6 +18,7 @@ interface ToastItem {
   message: string;
   variant: ToastVariant;
   expireAt: number;
+  durationMs: number;
 }
 
 interface ToastContextValue {
@@ -46,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message, variant = "success", durationMs = DEFAULT_DURATION_MS) => {
       const id = nextId();
       const expireAt = Date.now() + durationMs;
-      setToasts((prev) => [...prev, { id, message, variant, expireAt }]);
+      setToasts((prev) => [...prev, { id, message, variant, expireAt, durationMs }]);
       const timer = window.setTimeout(() => dismiss(id), durationMs);
       timersRef.current.set(id, timer);
     },
@@ -69,10 +72,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             className={`toast toast-${t.variant}`}
+            style={{ "--toast-ms": `${t.durationMs}ms` } as CSSProperties}
             onClick={() => dismiss(t.id)}
           >
             <span className="toast-icon">
-              {t.variant === "success" ? "✓" : t.variant === "error" ? "✗" : "ℹ"}
+              <Icon name={t.variant === "success" ? "check" : t.variant === "error" ? "x" : "info"} />
             </span>
             <span className="toast-message">{t.message}</span>
           </div>

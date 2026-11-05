@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSettings, ThemeMode } from "../state/SettingsContext";
 import { FilterLogLevel } from "../types";
+import { Icon } from "./Icons";
 import "./SettingsModal.css";
 
 type PortApplyStatus =
@@ -136,21 +137,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         aria-labelledby="settings-title"
       >
         <header className="settings-header">
-          <h2 id="settings-title">⚙ Settings</h2>
+          <h2 id="settings-title">Settings</h2>
           <button
             className="settings-close"
             onClick={onClose}
             aria-label="Close settings"
             type="button"
           >
-            ✕
+            <Icon name="x" />
           </button>
         </header>
 
         <div className="settings-body">
           {/* ─── Network ───────────────────────────────────── */}
           <section className="settings-section">
-            <h3 className="settings-section-title">🌐 Network</h3>
+            <h3 className="settings-section-title">Network</h3>
 
             <label className="settings-row">
               <div className="settings-row-label">
@@ -199,7 +200,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* ─── Console ───────────────────────────────────── */}
           <section className="settings-section">
-            <h3 className="settings-section-title">📋 Console</h3>
+            <h3 className="settings-section-title">Console</h3>
 
             <label className="settings-row">
               <div className="settings-row-label">
@@ -271,7 +272,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* ─── Connection ─────────────────────────────────── */}
           <section className="settings-section">
-            <h3 className="settings-section-title">🔌 Connection</h3>
+            <h3 className="settings-section-title">Connection</h3>
 
             <label className="settings-row">
               <div className="settings-row-label">
@@ -282,21 +283,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   and re-discover via mDNS within seconds.
                 </span>
                 {portStatus.kind === "applying" && (
-                  <span className="settings-row-status applying">⏳ Restarting on new port…</span>
+                  <span className="settings-row-status applying">Restarting on new port…</span>
                 )}
                 {portStatus.kind === "success" && (
                   <span className="settings-row-status success">
-                    ✓ Port updated to {portStatus.port}
+                    Port updated to {portStatus.port}
                   </span>
                 )}
                 {portStatus.kind === "error" && (
                   <span className="settings-row-status error">
-                    ✗ {portStatus.message}
+                    {portStatus.message}
                   </span>
                 )}
                 {portRangeError && portStatus.kind === "idle" && (
                   <span className="settings-row-status error">
-                    ✗ {portRangeError}
+                    {portRangeError}
                   </span>
                 )}
               </div>
@@ -378,7 +379,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* ─── Agents ─────────────────────────────────────── */}
           <section className="settings-section">
-            <h3 className="settings-section-title">🛰 Agents</h3>
+            <h3 className="settings-section-title">Agents</h3>
 
             <label className="settings-row">
               <div className="settings-row-label">
@@ -415,7 +416,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* ─── UI ─────────────────────────────────────────── */}
           <section className="settings-section">
-            <h3 className="settings-section-title">🎨 Appearance</h3>
+            <h3 className="settings-section-title">Appearance</h3>
 
             <label className="settings-row">
               <div className="settings-row-label">
@@ -436,6 +437,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="settings-row">
+              <div className="settings-row-label">
+                <span>Effects &amp; animations</span>
+                <span className="settings-row-hint">
+                  Scanlines, glow, animations and the boot log on launch
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.ui.effects}
+                onChange={(e) => updateSettings({ ui: { effects: e.target.checked } })}
+              />
             </label>
           </section>
         </div>

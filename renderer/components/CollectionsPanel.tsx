@@ -14,6 +14,9 @@ import { copyToClipboard, generateCurlCommand } from "../utils/curlGenerator";
 import { ParsedCurlRequest } from "../utils/curlParser";
 import { replayRequest } from "../utils/replayRequest";
 import { RequestState } from "../types";
+import { DecodeText } from "./DecodeText";
+import { HudEmpty } from "./HudEmpty";
+import { Icon } from "./Icons";
 import "./CollectionsPanel.css";
 
 /** A drag payload key used by the collections drag & drop. */
@@ -164,38 +167,38 @@ export function CollectionsPanel() {
   const buildContextMenu = (req: SavedRequest): ContextMenuItem[] => [
     {
       id: "replay",
-      icon: "🔁",
+      icon: <Icon name="replay" />,
       label: "Replay",
       onClick: () => handleReplay(req),
     },
     {
       id: "edit-replay",
-      icon: "✏️",
+      icon: <Icon name="edit" />,
       label: "Edit & Replay…",
       onClick: () => setEditAndReplayTarget(req),
     },
     { id: "sep-1", label: "", separator: true },
     {
       id: "edit-meta",
-      icon: "📝",
+      icon: <Icon name="note" />,
       label: "Rename / edit metadata…",
       onClick: () => setEditingRequest(req),
     },
     {
       id: "move",
-      icon: "📂",
+      icon: <Icon name="move" />,
       label: "Move to another collection…",
       onClick: () => setMoveDialog(req),
     },
     {
       id: "copy-url",
-      icon: "🔗",
+      icon: <Icon name="link" />,
       label: "Copy URL",
       onClick: () => void handleCopy(req.url, "URL"),
     },
     {
       id: "copy-curl",
-      icon: "📋",
+      icon: <Icon name="code" />,
       label: "Copy as cURL",
       onClick: () =>
         void handleCopy(generateCurlCommand(toReplayShape(req)), "cURL komutu"),
@@ -203,7 +206,7 @@ export function CollectionsPanel() {
     { id: "sep-2", label: "", separator: true },
     {
       id: "delete",
-      icon: "🗑",
+      icon: <Icon name="trash" />,
       label: "Delete",
       destructive: true,
       onClick: () => handleDelete(req),
@@ -214,7 +217,7 @@ export function CollectionsPanel() {
     <div className="collections-panel">
       <div className="collections-left">
         <header className="collections-left-header">
-          <h2>📚 Collections</h2>
+          <h2><Icon name="stack" /> Collections</h2>
           <div className="collections-left-header-actions">
             <span className="collections-left-count">
               {state.savedRequests.length} saved
@@ -225,7 +228,7 @@ export function CollectionsPanel() {
               title="Import a request from a cURL command"
               type="button"
             >
-              ⤓ cURL
+              <Icon name="download" /> cURL
             </button>
             <button
               className="collections-new-btn"
@@ -233,21 +236,22 @@ export function CollectionsPanel() {
               title="Create a new collection"
               type="button"
             >
-              + New
+              <Icon name="plus" /> New
             </button>
           </div>
         </header>
 
         {grouped.length === 0 ? (
-          <div className="collections-empty">
-            <div className="collections-empty-icon">📚</div>
-            <p>No saved requests yet.</p>
-            <p className="collections-empty-hint">
-              Right-click any request in the Network panel and choose{" "}
-              <strong>Save request…</strong>, or click <strong>+ New</strong> to
-              start a collection.
-            </p>
-          </div>
+          <HudEmpty
+            title="No saved requests yet"
+            hint={
+              <>
+                Right-click any request in the Network panel and choose{" "}
+                <strong>Save to collection…</strong>, or click <strong>New</strong> to
+                start a collection.
+              </>
+            }
+          />
         ) : (
           <div className="collections-tree">
             {grouped.map((group) => {
@@ -290,7 +294,7 @@ export function CollectionsPanel() {
                     <span className="collections-group-caret">
                       {isCollapsed ? "▸" : "▾"}
                     </span>
-                    <span className="collections-group-icon">📁</span>
+                    <span className="collections-group-icon"><Icon name="folder" /></span>
                     <span className="collections-group-name">{group.name}</span>
                     <span className="collections-group-count">
                       {group.items.length}
@@ -370,6 +374,7 @@ export function CollectionsPanel() {
       <div className="collections-right">
         {selected ? (
           <SavedRequestDetails
+            key={selected.id}
             request={selected}
             onReplay={() => handleReplay(selected)}
             onEditReplay={() => setEditAndReplayTarget(selected)}
@@ -385,10 +390,7 @@ export function CollectionsPanel() {
             }
           />
         ) : (
-          <div className="collections-no-selection">
-            <div className="collections-no-selection-icon">👈</div>
-            <p>Select a saved request from the left</p>
-          </div>
+          <HudEmpty title="Select a saved request" hint="Pick one from the tree to inspect, edit or replay it." />
         )}
       </div>
 
@@ -421,13 +423,13 @@ export function CollectionsPanel() {
           items={[
             {
               id: "rename-collection",
-              icon: "✏️",
+              icon: <Icon name="edit" />,
               label: "Rename collection…",
               onClick: () => setRenameTarget(groupMenu.name),
             },
             {
               id: "delete-collection",
-              icon: "🗑",
+              icon: <Icon name="trash" />,
               label: "Delete collection",
               destructive: true,
               onClick: () => {
@@ -536,7 +538,9 @@ function SavedRequestDetails({
           >
             {request.method.toUpperCase()}
           </span>
-          <h2>{defaultRequestLabel(request)}</h2>
+          <h2>
+            <DecodeText text={defaultRequestLabel(request)} />
+          </h2>
         </div>
         {request.description && (
           <p className="saved-details-description">{request.description}</p>
@@ -554,29 +558,29 @@ function SavedRequestDetails({
 
       <div className="saved-details-actions">
         <button onClick={onReplay} className="saved-details-action primary" type="button">
-          🔁 Replay
+          <Icon name="replay" /> Replay
         </button>
         <button onClick={onEditReplay} className="saved-details-action" type="button">
-          ✏️ Edit & Replay…
+          <Icon name="edit" /> Edit & Replay…
         </button>
         <button onClick={onEditMeta} className="saved-details-action" type="button">
-          📝 Edit metadata
+          <Icon name="note" /> Edit metadata
         </button>
         <button onClick={onMove} className="saved-details-action" type="button">
-          📂 Move
+          <Icon name="move" /> Move
         </button>
         <button onClick={onCopyUrl} className="saved-details-action" type="button">
-          🔗 Copy URL
+          <Icon name="link" /> Copy URL
         </button>
         <button onClick={onCopyCurl} className="saved-details-action" type="button">
-          📋 Copy as cURL
+          <Icon name="code" /> Copy as cURL
         </button>
         <button
           onClick={onDelete}
           className="saved-details-action destructive"
           type="button"
         >
-          🗑 Delete
+          <Icon name="trash" /> Delete
         </button>
       </div>
 
@@ -665,7 +669,7 @@ function MoveCollectionDialog({
             type="button"
             aria-label="Close"
           >
-            ✕
+            <Icon name="x" />
           </button>
         </header>
         <div className="save-request-body">
@@ -688,7 +692,7 @@ function MoveCollectionDialog({
                 }`}
                 onClick={() => setMode("new")}
               >
-                + New
+                <Icon name="plus" /> New
               </button>
             </div>
             {mode === "existing" ? (
@@ -781,7 +785,7 @@ function CollectionNameDialog({
             type="button"
             aria-label="Close"
           >
-            ✕
+            <Icon name="x" />
           </button>
         </header>
         <div className="save-request-body">

@@ -6,6 +6,7 @@ import {
   UNCATEGORIZED_BUCKET,
 } from "../state/CollectionsContext";
 import { useToast } from "./Toast";
+import { Icon } from "./Icons";
 import "./SaveRequestModal.css";
 
 interface SaveRequestModalProps {
@@ -155,7 +156,7 @@ export function SaveRequestModal({ source, editingId, onClose }: SaveRequestModa
             aria-label="Close"
             type="button"
           >
-            ✕
+            <Icon name="x" />
           </button>
         </header>
 

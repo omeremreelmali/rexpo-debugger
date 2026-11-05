@@ -1,3 +1,4 @@
+import "@fontsource-variable/jetbrains-mono";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App";
@@ -53,6 +54,9 @@ declare global {
     if (raw) {
       const parsed = JSON.parse(raw);
       theme = parsed?.ui?.theme || "dark";
+      if (parsed?.ui?.effects === false) {
+        document.documentElement.setAttribute("data-fx", "off");
+      }
     }
     const resolved =
       theme === "system"

@@ -4,6 +4,9 @@ import { JsonViewer, TextViewer } from "./JsonViewer";
 import { copyToClipboard } from "../utils/curlGenerator";
 import { consoleLogToText, formatConsoleArg } from "../utils/consoleFormat";
 import { FindInContent } from "./FindInContent";
+import { DecodeText } from "./DecodeText";
+import { HudEmpty } from "./HudEmpty";
+import { Icon } from "./Icons";
 import "./ConsoleDetails.css";
 
 /** Small inline button that copies plain text and flashes "Copied". */
@@ -23,7 +26,8 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
       }}
       title={`${label} (clean text)`}
     >
-      {copied ? "✓ Copied" : `⧉ ${label}`}
+      <Icon name={copied ? "check" : "copy"} />
+      {copied ? "Copied" : label}
     </button>
   );
 }
@@ -39,9 +43,7 @@ export function ConsoleDetails() {
   if (!selectedLog) {
     return (
       <div className="console-details">
-        <div className="console-details-empty">
-          <span>Select a console log to view details</span>
-        </div>
+        <HudEmpty title="Select a log entry" hint="Arguments, stack trace and raw payload open here." />
       </div>
     );
   }
@@ -53,9 +55,10 @@ export function ConsoleDetails() {
           <span className={`level-badge ${selectedLog.level}`}>
             {selectedLog.level.toUpperCase()}
           </span>
-          <span className="console-details-timestamp">
-            {formatTimestamp(selectedLog.timestamp)}
-          </span>
+          <DecodeText
+            text={formatTimestamp(selectedLog.timestamp)}
+            className="console-details-timestamp"
+          />
         </div>
         <CopyButton text={consoleLogToText(selectedLog)} label="Copy message" />
       </div>

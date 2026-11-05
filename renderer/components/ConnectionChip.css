@@ -6,16 +6,16 @@
 .connection-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px 4px 10px;
+  gap: 7px;
+  height: 28px;
+  padding: 0 4px 0 9px;
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   color: var(--text-tertiary);
-  font-size: 12px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
+  font-size: 11px;
   cursor: default;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.1s ease;
 }
 
 .connection-chip-clickable {
@@ -24,77 +24,88 @@
 
 .connection-chip-clickable:hover {
   border-color: var(--accent);
-  background: var(--elevated-bg);
 }
 
 .connection-chip-loading {
+  padding-right: 9px;
   opacity: 0.6;
 }
 
 .connection-dot {
-  width: 8px;
-  height: 8px;
+  position: relative;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.connection-dot-active {
+.connection-dot.connection-dot-active {
   background: var(--success);
-  box-shadow: 0 0 6px var(--success-glow);
+  box-shadow: 0 0 8px var(--success-glow);
 }
 
-.connection-dot-listening {
+.connection-dot.connection-dot-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--success);
+  border-radius: 50%;
+  animation: hud-ping 1.8s ease-out infinite;
+}
+
+.connection-dot.connection-dot-listening {
   background: var(--warning);
+  animation: hud-pulse 1.4s ease-in-out infinite alternate;
 }
 
-.connection-dot-error {
+.connection-dot.connection-dot-error {
   background: var(--error);
 }
 
-.connection-dot-idle {
+.connection-dot.connection-dot-idle {
   background: var(--text-muted);
 }
 
+.connection-state {
+  animation: hud-state-in 0.5s ease-out;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.connection-state.connection-dot-active { color: var(--success); }
+.connection-state.connection-dot-listening { color: var(--warning); }
+.connection-state.connection-dot-error { color: var(--error); }
+
 .connection-text {
-  color: var(--success);
-  font-weight: 500;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .connection-manual-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 16px;
-  padding: 0 5px;
-  background: var(--warning-bg);
+  padding: 0 4px;
   color: var(--warning);
   border: 1px solid var(--warning-border);
+  border-radius: var(--radius);
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  border-radius: 3px;
+  line-height: 14px;
 }
 
 .connection-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 5px;
+  padding: 0 4px;
   background: var(--success);
   color: var(--text-inverse);
+  border-radius: var(--radius);
   font-size: 10px;
   font-weight: 700;
-  border-radius: 8px;
+  line-height: 15px;
 }
 
 .connection-caret {
-  font-size: 10px;
   color: var(--text-muted);
-  margin-left: -2px;
+  font-size: 10px;
 }
 
 .connection-copy {
@@ -102,53 +113,56 @@
   align-items: center;
   justify-content: center;
   width: 22px;
-  height: 22px;
-  margin-left: 2px;
+  height: 20px;
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 4px;
-  color: var(--text-tertiary);
-  font-size: 12px;
+  border-radius: var(--radius);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: color 0.1s ease;
+}
+
+.connection-copy .icon {
+  width: 12px;
+  height: 12px;
 }
 
 .connection-copy:hover {
-  background: var(--hover-overlay-strong);
+  color: var(--accent);
 }
 
 .connection-dropdown {
+  animation: context-menu-fade-in 0.1s ease-out;
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
-  min-width: 280px;
+  right: 0;
+  min-width: 300px;
   background: var(--elevated-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
   box-shadow: var(--shadow-popup);
   z-index: 1000;
   overflow: hidden;
 }
 
 .connection-dropdown-header {
-  padding: 8px 12px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  padding: 7px 12px;
   color: var(--text-muted);
   background: var(--panel-bg);
   border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .connection-dropdown-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 7px 12px;
   cursor: pointer;
   border-bottom: 1px solid var(--border-muted);
-  transition: background 0.15s ease;
 }
 
 .connection-dropdown-item:last-child {
@@ -160,14 +174,8 @@
 }
 
 .connection-dropdown-item-selected {
-  background: var(--accent-bg);
-}
-
-.connection-dropdown-item-selected::before {
-  content: "✓";
-  margin-right: 6px;
-  color: var(--success);
-  font-weight: 700;
+  background: var(--accent-bg-strong);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .connection-dropdown-main {
@@ -179,15 +187,13 @@
 }
 
 .connection-dropdown-name {
-  font-size: 11px;
   color: var(--text-muted);
-  text-transform: lowercase;
+  font-size: 10px;
 }
 
 .connection-dropdown-address {
+  color: var(--accent);
   font-size: 12px;
-  color: var(--success);
-  font-family: monospace;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

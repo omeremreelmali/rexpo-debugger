@@ -131,7 +131,7 @@ function JsonNode({ data, level, name, isLast = false }: JsonNodeProps) {
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? "Expand" : "Collapse"}
           >
-            {collapsed ? "▶" : "▼"}
+            {collapsed ? "▸" : "▾"}
           </button>
         )}
         {!isExpandable && <span className="json-spacer" />}

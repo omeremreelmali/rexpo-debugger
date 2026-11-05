@@ -1,0 +1,113 @@
+.status-line {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 14px;
+  height: 22px;
+  padding-right: 10px;
+  background: var(--panel-bg);
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Editor-style mode block at the far left. */
+.status-mode {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 10px;
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.status-line.is-paused .status-mode {
+  background: var(--error);
+}
+
+.status-capture {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+}
+
+.status-capture-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: var(--glow);
+  animation: hud-pulse 1.2s ease-in-out infinite alternate;
+}
+
+.status-line.is-paused .status-capture {
+  color: var(--error);
+}
+
+.status-line.is-paused .status-capture-dot {
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+.status-stat {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-stat-label {
+  margin-right: 5px;
+  color: var(--text-faint);
+}
+
+.status-stat.tone-error {
+  color: var(--error);
+}
+
+.status-stat.tone-warn {
+  color: var(--warning);
+}
+
+.status-line-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.status-spark {
+  color: var(--accent);
+  letter-spacing: -0.5px;
+  text-shadow: var(--text-glow);
+}
+
+.status-clock {
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .status-spark {
+    display: none;
+  }
+}
+
+.status-mode {
+  animation: hud-wipe 0.22s ease-out;
+}
+
+.status-stat-value {
+  display: inline-block;
+  animation: hud-tick 0.45s ease-out;
+}
+
+.status-line.is-paused .status-mode {
+  animation: hud-pulse 0.9s ease-in-out infinite alternate;
+}

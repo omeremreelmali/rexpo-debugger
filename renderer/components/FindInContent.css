@@ -1,23 +1,15 @@
 .find-in-content {
+  position: relative;
   min-height: 0;
 }
 
 .find-open-button {
-  float: right;
-  margin: 0 0 8px 8px;
-  padding: 4px 9px;
   color: var(--text-muted);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   font-size: 11px;
   cursor: pointer;
-}
-
-.find-open-button:hover {
-  color: var(--text-primary);
-  background: var(--alt-bg);
-  border-color: var(--accent);
 }
 
 .find-bar {
@@ -31,7 +23,7 @@
   padding: 8px 10px;
   background: var(--elevated-bg);
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+  
 }
 
 .find-bar input {
@@ -41,7 +33,7 @@
   color: var(--text-primary);
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   outline: none;
 }
 
@@ -62,7 +54,7 @@
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
@@ -78,19 +70,34 @@
   color: var(--text-secondary);
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  font: 12px/1.55 'Consolas', 'Monaco', 'Courier New', monospace;
+  border-radius: var(--radius);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .find-results mark {
   padding: 0;
   color: inherit;
-  background: rgba(255, 196, 0, 0.38);
-  border-radius: 2px;
+  background: var(--find-match-bg);
+  border-radius: var(--radius);
 }
 
 .find-results mark.active {
-  color: #111;
-  background: #ffb300;
-  outline: 1px solid #ffcf4a;
+  color: var(--find-active-fg);
+  background: var(--find-active-bg);
+}
+
+.find-in-content > .find-open-button {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  z-index: 1;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 10px;
+}
+
+.find-open-button .icon {
+  width: 11px;
+  height: 11px;
 }

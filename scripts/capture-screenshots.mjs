@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { buildCollectionsSeed, sendInitialBurst } from "./dummy-payloads.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT_DIR = resolve(__dirname, "..", "assets", "screenshots");
+const OUT_DIR = process.env.SCREENSHOT_DIR ?? resolve(__dirname, "..", "assets", "screenshots");
 const CDP_PORT = 9222;
 const AGENT_URL = "ws://localhost:5051";
 const RENDERER_URL_PREFIX = "http://localhost:5173";

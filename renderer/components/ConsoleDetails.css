@@ -6,17 +6,8 @@
   overflow: hidden;
 }
 
-.console-details-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
 .console-details-header {
-  padding: 16px;
+  padding: 10px 14px;
   background: var(--elevated-bg);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -31,31 +22,9 @@
   gap: 12px;
 }
 
-.console-copy-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-secondary, var(--text-primary));
-  font-size: 11px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-}
-
-.console-copy-btn:hover {
-  background: var(--hover-overlay);
-  border-color: var(--accent-hover, #0e639c);
-  color: var(--text-primary);
-}
-
 .console-details-timestamp {
   color: var(--text-muted);
   font-size: 12px;
-  font-family: 'Consolas', 'Courier New', monospace;
 }
 
 .console-details-body {
@@ -77,14 +46,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   margin-bottom: 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
 }
 
 .console-details-section-title .console-copy-btn {
@@ -93,7 +55,6 @@
 }
 
 .console-details-section-content {
-  font-family: 'Consolas', 'Courier New', monospace;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -104,7 +65,7 @@
   word-break: break-word;
   background: var(--elevated-bg);
   padding: 12px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   overflow-x: auto;
 }
@@ -115,7 +76,7 @@
   margin-bottom: 12px;
   padding: 8px;
   background: var(--elevated-bg);
-  border-radius: 4px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
 }
 
@@ -151,36 +112,13 @@
   line-height: 1.6;
 }
 
-.level-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+
+/* Leave room for the Find button that shares this row. */
+.console-details-section:first-of-type .console-details-section-title {
+  padding-right: 68px;
 }
 
-.level-badge.log {
-  background: var(--log-log-bg);
-  color: var(--log-log-stripe);
-}
-
-.level-badge.info {
-  background: var(--log-info-bg);
-  color: var(--log-info-stripe);
-}
-
-.level-badge.warn {
-  background: var(--log-warn-bg);
-  color: var(--log-warn-stripe);
-}
-
-.level-badge.error {
-  background: var(--log-error-bg);
-  color: var(--log-error-stripe);
-}
-
-.level-badge.debug {
-  background: var(--log-debug-bg);
-  color: var(--log-debug-stripe);
+.console-details-body .find-in-content > .find-open-button {
+  top: 0;
+  height: 26px;
 }

@@ -3,27 +3,29 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background: var(--elevated-bg);
+  background: var(--app-bg);
 }
 
 .console-header {
   display: flex;
+  flex-shrink: 0;
+  height: 26px;
+  align-items: center;
   background: var(--panel-bg);
   border-bottom: 1px solid var(--border);
-  font-size: 11px;
+  color: var(--text-muted);
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text-tertiary);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .console-header-cell {
-  padding: 8px 12px;
-  border-right: 1px solid var(--border);
+  padding: 0 10px;
 }
 
 .console-header-cell.level {
-  width: 100px;
+  width: 76px;
   flex-shrink: 0;
 }
 
@@ -33,24 +35,27 @@
 }
 
 .console-header-cell.timestamp {
-  width: 140px;
+  width: 106px;
   flex-shrink: 0;
 }
 
 .console-body {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .console-row {
   display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: 27px;
   position: relative;
   border-bottom: 1px solid var(--border-muted);
   cursor: pointer;
-  transition: background-color 0.1s ease;
-  font-size: 13px;
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
 }
 
 .console-row-copy {
@@ -59,18 +64,16 @@
   top: 50%;
   transform: translateY(-50%);
   width: 22px;
-  height: 22px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--elevated-bg, var(--panel-bg));
-  color: var(--text-secondary, var(--text-primary));
-  font-size: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--elevated-bg);
+  color: var(--text-secondary);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.12s ease, background 0.12s ease;
 }
 
 .console-row:hover .console-row-copy {
@@ -78,54 +81,59 @@
 }
 
 .console-row-copy:hover {
-  background: var(--hover-overlay);
-  border-color: var(--accent-hover, #0e639c);
-  color: var(--text-primary);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .console-row:hover {
-  background: var(--alt-bg);
+  background: var(--row-hover-bg);
+}
+
+/* Level tints */
+.console-row.level-warn {
+  background: var(--log-warn-bg);
+  box-shadow: inset 2px 0 0 var(--log-warn-stripe);
+}
+
+.console-row.level-warn .console-cell.message {
+  color: var(--log-warn-stripe);
+}
+
+.console-row.level-error {
+  background: var(--log-error-bg);
+  box-shadow: inset 2px 0 0 var(--log-error-stripe);
+}
+
+.console-row.level-error .console-cell.message {
+  color: var(--log-error-stripe);
+}
+
+.console-row.level-info {
+  box-shadow: inset 2px 0 0 var(--log-info-stripe);
+}
+
+.console-row.level-debug {
+  box-shadow: inset 2px 0 0 var(--log-debug-stripe);
+}
+
+.console-row.level-debug .console-cell.message {
+  color: var(--text-muted);
 }
 
 .console-row.selected {
   background: var(--accent-bg-strong);
-}
-
-.console-row.selected:hover {
-  background: var(--accent-bg-strong);
-  filter: brightness(1.08);
-}
-
-/* Level colors */
-.console-row.level-log {
-  border-left: 3px solid var(--log-log-stripe);
-}
-
-.console-row.level-info {
-  border-left: 3px solid var(--log-info-stripe);
-}
-
-.console-row.level-warn {
-  border-left: 3px solid var(--log-warn-stripe);
-}
-
-.console-row.level-error {
-  border-left: 3px solid var(--log-error-stripe);
-}
-
-.console-row.level-debug {
-  border-left: 3px solid var(--log-debug-stripe);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .console-cell {
-  padding: 8px 12px;
+  padding: 0 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .console-cell.level {
-  width: 100px;
+  width: 76px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -138,64 +146,28 @@
 }
 
 .console-cell.timestamp {
-  width: 140px;
+  width: 106px;
   flex-shrink: 0;
   color: var(--text-muted);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
-.level-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+.console-row:nth-child(-n + 30) {
+  animation: hud-row-reveal 0.2s ease-out backwards;
+  animation-delay: calc(var(--i, 0) * 11ms);
 }
 
-.level-badge.log {
-  background: var(--log-log-bg);
-  color: var(--log-log-stripe);
+.console-row {
+  transition: background-color 0.1s ease;
 }
 
-.level-badge.info {
-  background: var(--log-info-bg);
-  color: var(--log-info-stripe);
+.console-row.is-fresh {
+  animation: hud-row-in 0.7s ease-out;
+  animation-delay: 0s;
 }
 
-.level-badge.warn {
-  background: var(--log-warn-bg);
-  color: var(--log-warn-stripe);
-}
-
-.level-badge.error {
-  background: var(--log-error-bg);
-  color: var(--log-error-stripe);
-}
-
-.level-badge.debug {
-  background: var(--log-debug-bg);
-  color: var(--log-debug-stripe);
-}
-
-.console-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-muted);
-  gap: 8px;
-  padding: 40px;
-  text-align: center;
-}
-
-.console-empty span {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.console-empty small {
-  font-size: 12px;
-  color: var(--text-faint);
+/* Keeps its vertical centering while pressed. */
+.console-row .console-row-copy:active:not(:disabled) {
+  transform: translateY(-50%);
 }

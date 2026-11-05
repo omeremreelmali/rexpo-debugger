@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { NetworkProvider, useNetwork } from "./state/NetworkContext";
 import { SettingsProvider, useSettings } from "./state/SettingsContext";
-import { CollectionsProvider, useCollections } from "./state/CollectionsContext";
-import { StateProvider, useStores } from "./state/StateContext";
+import { CollectionsProvider } from "./state/CollectionsContext";
+import { StateProvider } from "./state/StateContext";
 import { ToastProvider } from "./components/Toast";
+import { BootSequence } from "./components/BootSequence";
 import { FilterBar } from "./components/FilterBar";
+import { StatusLine } from "./components/StatusLine";
+import { TopBar } from "./components/TopBar";
 import { NetworkTable } from "./components/NetworkTable";
 import { RequestDetails } from "./components/RequestDetails";
 import { ConsoleTable } from "./components/ConsoleTable";
@@ -90,6 +93,11 @@ function AppContent() {
     mql.addEventListener("change", applySystem);
     return () => mql.removeEventListener("change", applySystem);
   }, [settings.ui.theme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-fx", settings.ui.effects ? "on" : "off");
+  }, [settings.ui.effects]);
+
   const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
     const saved = localStorage.getItem(PANEL_WIDTH_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : 50; // Default 50% of viewport
@@ -160,110 +168,41 @@ function AppContent() {
 
   return (
       <div className="app-container">
-        <FilterBar />
-      
-      {/* Tab Navigation */}
-      <div className="tab-navigation">
-        <button
-          className={`tab-button ${state.activeTab === "network" ? "active" : ""}`}
-          onClick={() => dispatch({ type: "SET_ACTIVE_TAB", payload: "network" })}
-        >
-          <span className="tab-icon">🌐</span>
-          Network
-          {state.requests.length > 0 && (
-            <span className="tab-count">{state.requests.length}</span>
-          )}
-        </button>
-        <button
-          className={`tab-button ${state.activeTab === "console" ? "active" : ""}`}
-          onClick={() => dispatch({ type: "SET_ACTIVE_TAB", payload: "console" })}
-        >
-          <span className="tab-icon">📋</span>
-          Console
-          {state.consoleLogs.length > 0 && (
-            <span className="tab-count">{state.consoleLogs.length}</span>
-          )}
-        </button>
-        <CollectionsTabButton
-          isActive={state.activeTab === "collections"}
-          onClick={() => dispatch({ type: "SET_ACTIVE_TAB", payload: "collections" })}
-        />
-        <StateTabButton
-          isActive={state.activeTab === "state"}
-          onClick={() => dispatch({ type: "SET_ACTIVE_TAB", payload: "state" })}
-        />
-      </div>
+        <TopBar />
+        {(state.activeTab === "network" || state.activeTab === "console") && <FilterBar />}
 
       {/* Main Content */}
-      {state.activeTab === "collections" ? (
-        <CollectionsPanel />
-      ) : state.activeTab === "state" ? (
-        <StatePanel />
-      ) : (
-        <div className="main-content" ref={mainContentRef}>
-          <div
-            className="left-panel"
-            style={{ width: `${leftPanelWidth}%` }}
-          >
-            {state.activeTab === "network" ? <NetworkTable /> : <ConsoleTable />}
+      <div className="panel-stage" key={state.activeTab}>
+        {state.activeTab === "collections" ? (
+          <CollectionsPanel />
+        ) : state.activeTab === "state" ? (
+          <StatePanel />
+        ) : (
+          <div className="main-content" ref={mainContentRef}>
+            <div
+              className="left-panel"
+              style={{ width: `${leftPanelWidth}%` }}
+            >
+              {state.activeTab === "network" ? <NetworkTable /> : <ConsoleTable />}
+            </div>
+            <div
+              className={`resizer ${isDragging ? "dragging" : ""}`}
+              onMouseDown={handleMouseDown}
+            />
+            <div
+              className="right-panel"
+              style={{ width: `${100 - leftPanelWidth}%` }}
+            >
+              {state.activeTab === "network" ? <RequestDetails /> : <ConsoleDetails />}
+            </div>
           </div>
-          <div
-            className={`resizer ${isDragging ? "dragging" : ""}`}
-            onMouseDown={handleMouseDown}
-          />
-          <div
-            className="right-panel"
-            style={{ width: `${100 - leftPanelWidth}%` }}
-          >
-            {state.activeTab === "network" ? <RequestDetails /> : <ConsoleDetails />}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      <StatusLine />
+      <BootSequence />
+      <div className="crt-overlay" aria-hidden="true" />
     </div>
-  );
-}
-
-function CollectionsTabButton({
-  isActive,
-  onClick,
-}: {
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const { state } = useCollections();
-  return (
-    <button
-      className={`tab-button ${isActive ? "active" : ""}`}
-      onClick={onClick}
-      type="button"
-    >
-      <span className="tab-icon">📚</span>
-      Collections
-      {state.savedRequests.length > 0 && (
-        <span className="tab-count">{state.savedRequests.length}</span>
-      )}
-    </button>
-  );
-}
-
-function StateTabButton({
-  isActive,
-  onClick,
-}: {
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const { stores } = useStores();
-  return (
-    <button
-      className={`tab-button ${isActive ? "active" : ""}`}
-      onClick={onClick}
-      type="button"
-    >
-      <span className="tab-icon">🧩</span>
-      State
-      {stores.length > 0 && <span className="tab-count">{stores.length}</span>}
-    </button>
   );
 }
 

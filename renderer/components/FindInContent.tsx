@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Icon } from "./Icons";
 import "./FindInContent.css";
 
 type FindInContentProps = {
@@ -98,7 +99,7 @@ export function FindInContent({
           }}
           title="Find in content (Cmd/Ctrl+F)"
         >
-          ⌕ Find
+          <Icon name="search" /> Find
         </button>
       )}
       {isOpen && (
@@ -129,7 +130,7 @@ export function FindInContent({
             }}
             title="Close (Escape)"
           >
-            ×
+            <Icon name="x" />
           </button>
         </div>
       )}

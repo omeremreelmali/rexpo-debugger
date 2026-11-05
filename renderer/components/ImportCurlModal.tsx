@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { parseCurlCommand, ParsedCurlRequest } from "../utils/curlParser";
+import { Icon } from "./Icons";
 import "./SaveRequestModal.css";
 import "./ImportCurlModal.css";
 
@@ -59,7 +60,7 @@ export function ImportCurlModal({ onCancel, onParsed }: ImportCurlModalProps) {
             type="button"
             aria-label="Close"
           >
-            ✕
+            <Icon name="x" />
           </button>
         </header>
 
@@ -78,7 +79,7 @@ export function ImportCurlModal({ onCancel, onParsed }: ImportCurlModalProps) {
           </label>
 
           {touched && !ok && (
-            <p className="import-curl-error">⚠ {result.error}</p>
+            <p className="import-curl-error">{result.error}</p>
           )}
 
           {ok && (

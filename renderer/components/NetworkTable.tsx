@@ -1,14 +1,18 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { useSettings } from "../state/SettingsContext";
 import { RequestState } from "../types";
 import { copyToClipboard, generateCurlCommand } from "../utils/curlGenerator";
 import { replayRequest } from "../utils/replayRequest";
 import { saveResponseToFile } from "../utils/saveResponse";
+import { getStatusClass } from "../utils/requestStatus";
 import { ContextMenu, ContextMenuItem } from "./ContextMenu";
 import { EditReplayModal } from "./EditReplayModal";
 import { SaveRequestModal } from "./SaveRequestModal";
 import { useToast } from "./Toast";
+import { HudEmpty } from "./HudEmpty";
+import { Icon } from "./Icons";
+import { UrlText } from "./UrlText";
 import "./NetworkTable.css";
 
 interface ContextMenuState {
@@ -24,6 +28,7 @@ export function NetworkTable() {
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [editTarget, setEditTarget] = useState<RequestState | null>(null);
   const [saveTarget, setSaveTarget] = useState<RequestState | null>(null);
+  const mountedAt = useRef(Date.now());
 
   const copyWithToast = async (text: string, label: string) => {
     const ok = await copyToClipboard(text);
@@ -59,12 +64,20 @@ export function NetworkTable() {
     return filtered;
   }, [state.requests, state.searchQuery, state.filterMethod, state.filterStatus]);
 
-  const getStatusClass = (request: RequestState): string => {
-    if (request.isError || !request.status) return "status-error";
-    if (request.status >= 200 && request.status < 300) return "status-success";
-    if (request.status >= 300 && request.status < 400) return "status-redirect";
-    if (request.status >= 400 && request.status < 500) return "status-client-error";
-    if (request.status >= 500) return "status-server-error";
+  const maxDuration = useMemo(
+    () => Math.max(1, ...filteredRequests.map((r) => r.durationMs ?? 0)),
+    [filteredRequests]
+  );
+
+  const getRowClass = (request: RequestState): string => {
+    if (request.isError || (request.status ?? 0) >= 500) return "row-error";
+    if ((request.status ?? 0) >= 400) return "row-warn";
+    return "";
+  };
+
+  const getDurationClass = (ms: number): string => {
+    if (ms >= 1000) return "very-slow";
+    if (ms >= 300) return "slow";
     return "";
   };
 
@@ -83,11 +96,6 @@ export function NetworkTable() {
     }
   };
 
-  const truncateUrl = (url: string, maxLength: number = 80): string => {
-    if (url.length <= maxLength) return url;
-    return url.slice(0, maxLength) + "...";
-  };
-
   const handleContextMenu = (e: React.MouseEvent, request: RequestState) => {
     e.preventDefault();
     e.stopPropagation();
@@ -101,27 +109,27 @@ export function NetworkTable() {
     return [
       {
         id: "copy-url",
-        icon: "🔗",
+        icon: <Icon name="link" />,
         label: "Copy URL",
         onClick: () => void copyWithToast(request.url, "URL"),
       },
       {
         id: "copy-curl",
-        icon: "📋",
+        icon: <Icon name="code" />,
         label: "Copy as cURL",
         onClick: () =>
           void copyWithToast(generateCurlCommand(request), "cURL komutu"),
       },
       {
         id: "copy-json",
-        icon: "🧾",
+        icon: <Icon name="braces" />,
         label: "Copy as JSON",
         onClick: () =>
           void copyWithToast(JSON.stringify(request, null, 2), "Request JSON"),
       },
       {
         id: "save-response",
-        icon: "💾",
+        icon: <Icon name="download" />,
         label: "Save response…",
         disabled: !hasResponseBody,
         onClick: async () => {
@@ -137,7 +145,7 @@ export function NetworkTable() {
       { id: "sep-1", label: "", separator: true },
       {
         id: "replay",
-        icon: "🔁",
+        icon: <Icon name="replay" />,
         label: "Replay",
         onClick: () => {
           replayRequest(request);
@@ -146,27 +154,27 @@ export function NetworkTable() {
       },
       {
         id: "edit-replay",
-        icon: "✏️",
+        icon: <Icon name="edit" />,
         label: "Edit & Replay…",
         onClick: () => setEditTarget(request),
       },
       {
         id: "save-request",
-        icon: "📚",
+        icon: <Icon name="stack" />,
         label: "Save to collection…",
         onClick: () => setSaveTarget(request),
       },
       { id: "sep-2", label: "", separator: true },
       {
         id: "delete",
-        icon: "🗑",
+        icon: <Icon name="trash" />,
         label: "Delete request",
         destructive: true,
         onClick: () => dispatch({ type: "DELETE_REQUEST", payload: request.id }),
       },
       {
         id: "clear-all",
-        icon: "🧹",
+        icon: <Icon name="sweep" />,
         label: "Clear all requests",
         destructive: true,
         onClick: () => dispatch({ type: "CLEAR_NETWORK" }),
@@ -177,65 +185,81 @@ export function NetworkTable() {
   return (
     <div className="network-table-container">
       {!settings.agents.networkEnabled ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🚫</div>
-          <p>Network agent disabled</p>
-          <p className="empty-state-hint">
-            Settings → Agents → Network agent enabled
-          </p>
-        </div>
+        <HudEmpty
+          error
+          title="Network agent disabled"
+          hint="Settings → Agents → Network agent enabled"
+        />
       ) : filteredRequests.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">📡</div>
-          <p>No network requests yet</p>
-          <p className="empty-state-hint">
-            Requests from your Expo app will appear here
-          </p>
-        </div>
+        <HudEmpty
+          radar={state.requests.length === 0}
+          title={state.requests.length === 0 ? "Awaiting signal" : "No requests match the filter"}
+          hint={
+            state.requests.length === 0
+              ? "Requests from your Expo app will appear here."
+              : "Loosen the search, method or status filter."
+          }
+        />
       ) : (
-        <table className="network-table">
-          <thead>
-            <tr>
-              <th style={{ width: "80px" }}>Method</th>
-              <th style={{ width: "80px" }}>Status</th>
-              <th style={{ flex: 1 }}>URL</th>
-              <th style={{ width: "100px" }}>Duration</th>
-              <th style={{ width: "100px" }}>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRequests.map((request) => (
-              <tr
-                key={request.id}
-                className={`network-row ${
-                  state.selectedRequestId === request.id ? "selected" : ""
-                }`}
-                onClick={() => dispatch({ type: "SELECT_REQUEST", payload: request.id })}
-                onContextMenu={(e) => handleContextMenu(e, request)}
-              >
-                <td>
-                  <span className={`method-badge method-${request.method.toLowerCase()}`}>
-                    {request.method === "OPTIONS" ? "Preflight" : request.method}
-                  </span>
-                </td>
-                <td>
-                  <span className={`status-badge ${getStatusClass(request)}`}>
-                    {request.isError
-                      ? "ERR"
-                      : request.status
-                      ? request.status
-                      : "..."}
-                  </span>
-                </td>
-                <td className="url-cell" title={request.url}>
-                  {truncateUrl(request.url)}
-                </td>
-                <td>{formatDuration(request.durationMs)}</td>
-                <td>{formatTime(request.startedAt)}</td>
+        <div className="network-table-scope">
+          <table className="network-table">
+            <thead>
+              <tr>
+                <th className="col-method">Method</th>
+                <th className="col-status">Status</th>
+                <th>URL</th>
+                <th className="col-duration">Duration</th>
+                <th className="col-time">Time</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredRequests.map((request, index) => (
+                <tr
+                  key={request.id}
+                  style={{ "--i": index } as CSSProperties}
+                  className={`network-row ${getRowClass(request)} ${
+                    state.selectedRequestId === request.id ? "selected" : ""
+                  } ${Date.parse(request.startedAt) > mountedAt.current ? "is-fresh" : ""}`}
+                  onClick={() => dispatch({ type: "SELECT_REQUEST", payload: request.id })}
+                  onContextMenu={(e) => handleContextMenu(e, request)}
+                >
+                  <td>
+                    <span className={`method-badge method-${request.method.toLowerCase()}`}>
+                      {request.method === "OPTIONS" ? "Preflight" : request.method}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge ${getStatusClass(request)}`}>
+                      {request.isError
+                        ? "ERR"
+                        : request.status
+                        ? request.status
+                        : "···"}
+                    </span>
+                  </td>
+                  <td className="url-cell" title={request.url}>
+                    <UrlText url={request.url} />
+                  </td>
+                  <td className="col-duration dur-cell">
+                    {formatDuration(request.durationMs)}
+                    {request.durationMs === undefined && !request.isError && !request.status && (
+                      <span className="dur-track is-pending" />
+                    )}
+                    {request.durationMs !== undefined && (
+                      <span className="dur-track">
+                        <span
+                          className={`dur-fill ${getDurationClass(request.durationMs)}`}
+                          style={{ width: `${Math.sqrt(request.durationMs / maxDuration) * 100}%` }}
+                        />
+                      </span>
+                    )}
+                  </td>
+                  <td className="col-time">{formatTime(request.startedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {menu && (

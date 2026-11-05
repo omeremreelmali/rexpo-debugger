@@ -19,7 +19,7 @@
   max-height: 90vh;
   background: var(--elevated-bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow-modal);
   display: flex;
   flex-direction: column;
@@ -47,7 +47,6 @@
   font-size: 11px;
   color: var(--text-muted);
   margin: 4px 0 0;
-  font-family: monospace;
 }
 
 .edit-replay-source-method {
@@ -57,26 +56,6 @@
 
 .edit-replay-source-url {
   color: var(--success);
-}
-
-.edit-replay-close {
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  font-size: 16px;
-  cursor: pointer;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.edit-replay-close:hover {
-  background: var(--hover-overlay-strong);
-  color: var(--text-primary);
 }
 
 .edit-replay-body {
@@ -97,9 +76,9 @@
 .edit-replay-method {
   width: 100px;
   padding: 8px 10px;
-  background: var(--input-bg);
+  background-color: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--warning);
   font-weight: 600;
   font-size: 12px;
@@ -111,10 +90,9 @@
   padding: 8px 10px;
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--success);
   font-size: 12px;
-  font-family: monospace;
   outline: none;
 }
 
@@ -128,9 +106,8 @@
   padding: 8px 10px;
   background: var(--alt-bg);
   border: 1px dashed var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   font-size: 11px;
-  font-family: monospace;
   word-break: break-all;
   line-height: 1.5;
 }
@@ -167,34 +144,12 @@
 }
 
 .edit-replay-section-header h3 {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
   margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
 }
 
 .edit-replay-body-actions {
   display: flex;
   gap: 6px;
-}
-
-.edit-replay-section-add {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-tertiary);
-  font-size: 11px;
-  padding: 3px 10px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.edit-replay-section-add:hover {
-  background: var(--hover-overlay);
-  border-color: var(--accent);
-  color: var(--text-primary);
 }
 
 .edit-replay-empty {
@@ -223,23 +178,14 @@
   text-decoration: line-through;
 }
 
-.edit-replay-header-row input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--accent);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
 .edit-replay-header-key,
 .edit-replay-header-value {
   padding: 6px 8px;
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--text-tertiary);
   font-size: 11px;
-  font-family: monospace;
   outline: none;
 }
 
@@ -264,7 +210,7 @@
   height: 26px;
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
@@ -291,9 +237,8 @@
   padding: 10px 12px;
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--text-secondary);
-  font-family: "SF Mono", Menlo, Monaco, monospace;
   font-size: 12px;
   line-height: 1.5;
   resize: vertical;
@@ -309,7 +254,6 @@
   color: var(--error);
   font-size: 11px;
   margin: 6px 0 0;
-  font-family: monospace;
 }
 
 .edit-replay-body-hint {
@@ -333,60 +277,3 @@
   gap: 8px;
 }
 
-.edit-replay-cancel,
-.edit-replay-send,
-.edit-replay-save,
-.edit-replay-save-as {
-  padding: 7px 18px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  border: none;
-  transition: background 0.15s ease;
-}
-
-.edit-replay-save-as,
-.edit-replay-save {
-  background: transparent;
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  font-weight: 600;
-}
-
-.edit-replay-save-as:hover:not(:disabled),
-.edit-replay-save:hover:not(:disabled) {
-  background: var(--hover-overlay);
-  border-color: var(--accent-hover);
-}
-
-.edit-replay-save:disabled,
-.edit-replay-save-as:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.edit-replay-cancel {
-  background: transparent;
-  color: var(--text-tertiary);
-  border: 1px solid var(--border);
-}
-
-.edit-replay-cancel:hover {
-  background: var(--hover-overlay);
-  color: var(--text-primary);
-}
-
-.edit-replay-send {
-  background: #0e639c;
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.edit-replay-send:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.edit-replay-send:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}

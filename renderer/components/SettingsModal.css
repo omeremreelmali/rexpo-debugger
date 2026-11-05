@@ -23,7 +23,7 @@
   max-height: 85vh;
   background: var(--elevated-bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow-modal);
   display: flex;
   flex-direction: column;
@@ -47,26 +47,6 @@
   letter-spacing: 0.3px;
 }
 
-.settings-close {
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  font-size: 16px;
-  cursor: pointer;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s ease;
-}
-
-.settings-close:hover {
-  background: var(--hover-overlay-strong);
-  color: var(--text-primary);
-}
-
 .settings-body {
   flex: 1;
   overflow-y: auto;
@@ -83,12 +63,7 @@
 }
 
 .settings-section-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin: 0 0 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  margin: 0 0 8px;
 }
 
 .settings-row {
@@ -118,7 +93,7 @@
 
 .settings-row-hint {
   font-size: 11px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-weight: normal;
   line-height: 1.4;
 }
@@ -132,17 +107,8 @@
   background: var(--warning-bg);
   border: 1px solid var(--warning-border);
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius);
   white-space: nowrap;
-}
-
-.settings-row input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--accent);
-  flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .settings-row input[type="number"],
@@ -151,10 +117,9 @@
   padding: 5px 8px;
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--text-tertiary);
   font-size: 12px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
   outline: none;
   flex-shrink: 0;
 }
@@ -170,9 +135,9 @@
 .settings-row select {
   width: 160px;
   padding: 5px 8px;
-  background: var(--input-bg);
+  background-color: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--text-tertiary);
   font-size: 12px;
   outline: none;
@@ -195,27 +160,6 @@
   width: 110px;
 }
 
-.settings-row-apply {
-  padding: 5px 12px;
-  background: #0e639c;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.settings-row-apply:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.settings-row-apply:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .settings-row-status {
   display: inline-flex;
   align-items: center;
@@ -224,7 +168,7 @@
   font-size: 11px;
   font-weight: 500;
   padding: 2px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius);
   width: fit-content;
 }
 
@@ -252,33 +196,3 @@
   background: var(--panel-bg);
 }
 
-.settings-reset,
-.settings-done {
-  padding: 6px 14px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  border: none;
-  transition: background 0.15s ease;
-}
-
-.settings-reset {
-  background: transparent;
-  color: var(--text-tertiary);
-  border: 1px solid var(--border);
-}
-
-.settings-reset:hover {
-  background: var(--hover-overlay);
-  color: var(--text-primary);
-}
-
-.settings-done {
-  background: #0e639c;
-  color: #ffffff;
-  font-weight: 500;
-}
-
-.settings-done:hover {
-  background: var(--accent-hover);
-}

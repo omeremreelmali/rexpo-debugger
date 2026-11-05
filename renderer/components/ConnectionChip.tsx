@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ConnectionInfo, NetworkInterfaceInfo } from "../types";
 import { useSettings } from "../state/SettingsContext";
+import { Icon } from "./Icons";
 import "./ConnectionChip.css";
 
 const SELECTED_INTERFACE_KEY = "rexpo-debugger-selected-interface";
@@ -97,6 +98,7 @@ export function ConnectionChip() {
     : connectedClients > 0
     ? "connection-dot-active"
     : "connection-dot-listening";
+  const linkLabel = !hasInterfaces ? "down" : connectedClients > 0 ? "link" : "listen";
 
   const handleSelect = (iface: NetworkInterfaceInfo) => {
     setSelectedAddress(iface.address);
@@ -136,6 +138,9 @@ export function ConnectionChip() {
         type="button"
       >
         <span className={`connection-dot ${dotClass}`} />
+        <span key={linkLabel} className={`connection-state ${dotClass}`}>
+          {linkLabel}
+        </span>
         {manualUrl && <span className="connection-manual-badge">M</span>}
         <span className="connection-text">{primaryUrl}</span>
         {connectedClients > 0 && (
@@ -150,7 +155,7 @@ export function ConnectionChip() {
           title="URL'yi kopyala"
           type="button"
         >
-          {selectedInterface && copiedAddress === selectedInterface.address ? "✓" : "📋"}
+          <Icon name={selectedInterface && copiedAddress === selectedInterface.address ? "check" : "copy"} />
         </button>
       </button>
 
@@ -179,7 +184,7 @@ export function ConnectionChip() {
                   title="URL'yi kopyala"
                   type="button"
                 >
-                  {copiedAddress === iface.address ? "✓" : "📋"}
+                  <Icon name={copiedAddress === iface.address ? "check" : "copy"} />
                 </button>
               </div>
             );

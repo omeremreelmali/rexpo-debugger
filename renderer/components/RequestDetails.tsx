@@ -2,9 +2,15 @@ import { useState, useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { generateCurlCommand, copyToClipboard } from "../utils/curlGenerator";
 import { replayRequest } from "../utils/replayRequest";
+import { getStatusClass } from "../utils/requestStatus";
 import { JsonViewer, TextViewer } from "./JsonViewer";
 import { FormDataViewer } from "./FormDataViewer";
 import { FindInContent } from "./FindInContent";
+import { DecodeText } from "./DecodeText";
+import { HudEmpty } from "./HudEmpty";
+import { Icon } from "./Icons";
+import { TabIndicator } from "./TabIndicator";
+import { UrlText } from "./UrlText";
 import "./RequestDetails.css";
 
 type Tab = "overview" | "headers" | "request" | "response" | "timing";
@@ -39,10 +45,7 @@ export function RequestDetails() {
   if (!selectedRequest) {
     return (
       <div className="request-details-container">
-        <div className="no-selection">
-          <div className="no-selection-icon">👈</div>
-          <p>Select a request from the left</p>
-        </div>
+        <HudEmpty title="Select a request" hint="Headers, bodies and timing open here. Right-click a row for more actions." />
       </div>
     );
   }
@@ -91,6 +94,47 @@ export function RequestDetails() {
 
   return (
     <div className="request-details-container">
+      <header className="req-hero">
+        <div className="req-hero-meta">
+          <DecodeText
+            text={selectedRequest.method}
+            className={`method-badge method-${selectedRequest.method.toLowerCase()}`}
+          />
+          <DecodeText
+            text={selectedRequest.isError ? "ERR" : String(selectedRequest.status || "···")}
+            className={`status-badge ${getStatusClass(selectedRequest)}`}
+          />
+          {selectedRequest.statusText && (
+            <DecodeText text={selectedRequest.statusText} className="req-hero-text" />
+          )}
+          {selectedRequest.durationMs !== undefined && (
+            <span className="req-hero-dur">{selectedRequest.durationMs.toFixed(0)} ms</span>
+          )}
+          <div className="req-hero-actions">
+            <button
+              className="replay-request-button"
+              onClick={handleReplay}
+              title="Replay this request"
+              type="button"
+            >
+              <Icon name="replay" /> Replay
+            </button>
+            <button
+              className={`copy-curl-button ${copySuccess ? "success" : ""}`}
+              onClick={handleCopyCurl}
+              title="Copy as cURL"
+              type="button"
+            >
+              <Icon name={copySuccess ? "check" : "code"} />
+              {copySuccess ? "Copied" : "Copy as cURL"}
+            </button>
+          </div>
+        </div>
+        <div className="req-hero-url">
+          <UrlText url={selectedRequest.url} decode />
+        </div>
+      </header>
+
       <div className="details-tabs">
         {tabs.map((tab) => (
           <button
@@ -101,6 +145,7 @@ export function RequestDetails() {
             {tab.label}
           </button>
         ))}
+        <TabIndicator watch={activeTab} />
       </div>
 
       <div className="details-content">
@@ -112,37 +157,7 @@ export function RequestDetails() {
         >
         {activeTab === "overview" && (
           <div className="details-section">
-            <div className="section-header">
-              <h3>General Information</h3>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  className="replay-request-button"
-                  onClick={handleReplay}
-                  title="Replay this request"
-                  style={{
-                    backgroundColor: "transparent",
-                    color: "inherit",
-                    border: "1px solid #4a4a4a",
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontSize: "0.85rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                >
-                  🔄 Replay
-                </button>
-                <button
-                  className={`copy-curl-button ${copySuccess ? "success" : ""}`}
-                  onClick={handleCopyCurl}
-                  title="Copy as cURL"
-                >
-                  {copySuccess ? "✓ Copied!" : "📋 Copy as cURL"}
-                </button>
-              </div>
-            </div>
+            <h3>General Information</h3>
             <div className="info-grid">
               <div className="info-row">
                 <span className="info-label">URL:</span>
@@ -204,7 +219,7 @@ export function RequestDetails() {
               <p className="empty-message">No request headers</p>
             )}
 
-            <h3 style={{ marginTop: "24px" }}>Response Headers</h3>
+            <h3>Response Headers</h3>
             {selectedRequest.responseHeaders ? (
               <div className="headers-list">
                 {Object.entries(selectedRequest.responseHeaders).map(

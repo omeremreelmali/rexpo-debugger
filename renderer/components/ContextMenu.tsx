@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import { ReactNode, useEffect, useRef, useState, useLayoutEffect, type CSSProperties } from "react";
 import "./ContextMenu.css";
 
 export interface ContextMenuItem {
   id: string;
   label: string;
-  icon?: string;
+  icon?: ReactNode;
   shortcut?: string;
   /** When true, the item is rendered as a separator and other fields are ignored. */
   separator?: boolean;
@@ -72,6 +72,7 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps) {
             key={item.id}
             type="button"
             role="menuitem"
+            style={{ "--i": idx } as CSSProperties}
             className={`context-menu-item ${item.disabled ? "disabled" : ""} ${
               item.destructive ? "destructive" : ""
             }`}

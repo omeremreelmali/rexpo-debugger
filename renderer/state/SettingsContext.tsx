@@ -44,6 +44,8 @@ export interface DebuggerSettings {
   };
   ui: {
     theme: ThemeMode;
+    /** Scanlines, glow, animations and the boot log. */
+    effects: boolean;
   };
 }
 
@@ -68,6 +70,7 @@ export const DEFAULT_SETTINGS: DebuggerSettings = {
   },
   ui: {
     theme: "dark",
+    effects: true,
   },
 };
 

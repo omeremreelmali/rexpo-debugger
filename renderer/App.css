@@ -1,4 +1,5 @@
 @import "./theme.css";
+@import "./hud.css";
 
 * {
   box-sizing: border-box;
@@ -8,14 +9,32 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--mono-font);
+  font-size: 12px;
+  font-feature-settings: "calt" 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--app-bg);
   color: var(--text-tertiary);
   overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  caret-color: var(--accent);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
 }
 
 #root {
@@ -32,67 +51,10 @@ body {
   overflow: hidden;
 }
 
-/* Tab Navigation */
-.tab-navigation {
-  display: flex;
-  background: var(--panel-bg);
-  border-bottom: 1px solid var(--border);
-  padding: 0 8px;
-  gap: 4px;
-}
-
-.tab-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s ease;
-  position: relative;
-}
-
-.tab-button:hover {
-  background: var(--hover-overlay);
-  color: var(--text-primary);
-}
-
-.tab-button.active {
-  color: var(--text-primary);
-  border-bottom-color: var(--accent);
-  background: var(--accent-bg);
-}
-
-.tab-icon {
-  font-size: 16px;
-}
-
-.tab-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 18px;
-  padding: 0 6px;
-  background: var(--accent);
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 9px;
-}
-
-.tab-button.active .tab-count {
-  background: var(--accent-strong);
-}
-
 .main-content {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -112,26 +74,27 @@ body {
   flex-shrink: 0;
 }
 
+/* 1px hairline with a wider invisible grab area. */
 .resizer {
-  width: 4px;
-  background: var(--panel-bg);
+  width: 5px;
+  margin: 0 -2px;
+  z-index: 20;
+  background: linear-gradient(var(--border), var(--border)) center / 1px 100% no-repeat;
   cursor: col-resize;
   flex-shrink: 0;
-  transition: background 0.15s ease;
   position: relative;
 }
 
-.resizer:hover {
-  background: var(--accent);
-}
-
+.resizer:hover,
 .resizer.dragging {
-  background: var(--accent);
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 1px 100%;
+  box-shadow: var(--glow);
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -140,9 +103,13 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 5px;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }

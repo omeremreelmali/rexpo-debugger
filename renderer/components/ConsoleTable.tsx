@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { useSettings } from "../state/SettingsContext";
 import { consoleLogToText } from "../utils/consoleFormat";
 import { copyToClipboard } from "../utils/curlGenerator";
+import { HudEmpty } from "./HudEmpty";
+import { Icon } from "./Icons";
 import "./ConsoleTable.css";
 
 /** Hover-revealed per-row copy button — copies the clean message text. */
@@ -22,7 +24,7 @@ function RowCopyButton({ text }: { text: string }) {
         }
       }}
     >
-      {copied ? "✓" : "⧉"}
+      <Icon name={copied ? "check" : "copy"} />
     </button>
   );
 }
@@ -30,6 +32,7 @@ function RowCopyButton({ text }: { text: string }) {
 export function ConsoleTable() {
   const { state, dispatch } = useNetwork();
   const { settings } = useSettings();
+  const mountedAt = useRef(Date.now());
 
   const filteredLogs = useMemo(() => {
     let logs = state.consoleLogs;
@@ -64,22 +67,31 @@ export function ConsoleTable() {
       </div>
       <div className="console-body">
         {!settings.agents.consoleEnabled ? (
-          <div className="console-empty">
-            <span>🚫 Console agent disabled</span>
-            <small>Settings → Agents → Console agent enabled</small>
-          </div>
+          <HudEmpty
+            error
+            title="Console agent disabled"
+            hint="Settings → Agents → Console agent enabled"
+          />
         ) : filteredLogs.length === 0 ? (
-          <div className="console-empty">
-            <span>No console logs yet</span>
-            <small>Console logs will appear here as they are generated</small>
-          </div>
+          <HudEmpty
+            radar={state.consoleLogs.length === 0}
+            title={state.consoleLogs.length === 0 ? "Listening for console output" : "No logs match the filter"}
+            hint={
+              state.consoleLogs.length === 0
+                ? "Logs from your Expo app stream in here as they are generated."
+                : "Loosen the search or the level filter."
+            }
+          />
         ) : (
-          filteredLogs.map((log) => (
+          filteredLogs.map((log, index) => (
             <div
               key={log.id}
+              style={{ "--i": index } as CSSProperties}
               className={`console-row ${
                 state.selectedConsoleId === log.id ? "selected" : ""
-              } level-${log.level}`}
+              } level-${log.level} ${
+                Date.parse(log.timestamp) > mountedAt.current ? "is-fresh" : ""
+              }`}
               onClick={() => handleLogClick(log.id)}
             >
               <div className="console-cell level">

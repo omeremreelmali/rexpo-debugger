@@ -1,146 +1,159 @@
 .network-table-container {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   background: var(--app-bg);
 }
 
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-muted);
-  padding: 40px;
-}
-
-.empty-state-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.empty-state p {
-  margin: 4px 0;
-  font-size: 14px;
-}
-
-.empty-state-hint {
-  font-size: 12px;
-  color: var(--text-faint);
+/* Wraps only the table: containment would re-anchor fixed menus and modals. */
+.network-table-scope {
+  container-type: inline-size;
 }
 
 .network-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  table-layout: fixed;
+  font-size: 12px;
 }
 
 .network-table thead {
   position: sticky;
   top: 0;
-  background: var(--elevated-bg);
-  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  box-shadow: inset 0 -1px 0 var(--border);
   z-index: 10;
 }
 
 .network-table th {
+  height: 26px;
+  padding: 0 10px;
   text-align: left;
-  padding: 8px 12px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  font-size: 12px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
+
+.col-method { width: 84px; }
+.col-status { width: 62px; }
+.col-duration { width: 88px; }
+.col-time { width: 78px; }
 
 .network-table tbody tr {
   border-bottom: 1px solid var(--border-muted);
   cursor: pointer;
-  transition: background 0.1s;
 }
 
 .network-table tbody tr:hover {
-  background: var(--alt-bg);
+  background: var(--row-hover-bg);
+}
+
+/* Failure stripes, so bad rows can be spotted while scrolling. */
+.network-table tbody tr.row-warn td:first-child {
+  box-shadow: inset 2px 0 0 var(--status-client-error);
+}
+
+.network-table tbody tr.row-error {
+  background: var(--error-bg);
+}
+
+.network-table tbody tr.row-error td:first-child {
+  box-shadow: inset 2px 0 0 var(--error);
 }
 
 .network-table tbody tr.selected {
-  background: var(--accent-bg-strong) !important;
+  background: var(--accent-bg-strong);
+}
+
+.network-table tbody tr.selected td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .network-table td {
-  padding: 8px 12px;
-  color: var(--text-tertiary);
+  height: 27px;
+  padding: 0 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .url-cell {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 12px;
 }
 
-.method-badge {
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: #ffffff;
+.dur-cell {
+  position: relative;
+  color: var(--text-tertiary) !important;
 }
 
-.method-get {
-  background: var(--method-get);
+.dur-track {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 2px;
+  height: 2px;
+  background: var(--hover-overlay);
 }
 
-.method-post {
-  background: var(--method-post);
+.dur-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
 }
 
-.method-put {
-  background: var(--method-put);
+.dur-fill.slow { background: var(--warning); }
+.dur-fill.very-slow { background: var(--error); }
+
+@container (max-width: 620px) {
+  .col-time {
+    display: none;
+  }
 }
 
-.method-delete {
-  background: var(--method-delete);
+@container (max-width: 430px) {
+  .col-duration {
+    display: none;
+  }
 }
 
-.method-patch {
-  background: var(--method-patch);
+/* First screenful cascades in; rows past it just appear. */
+.network-table tbody tr:nth-child(-n + 30) {
+  animation: hud-row-reveal 0.2s ease-out backwards;
+  animation-delay: calc(var(--i, 0) * 11ms);
 }
 
-.method-options {
-  background: var(--method-options);
+.network-table tbody tr,
+.network-table tbody tr td:first-child {
+  transition: background-color 0.1s ease, box-shadow 0.12s ease;
 }
 
-.method-unknown {
-  background: var(--text-muted);
+.network-table tbody tr.is-fresh {
+  animation: hud-row-in 0.7s ease-out;
+  animation-delay: 0s;
 }
 
-.status-badge {
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #ffffff;
+.dur-fill {
+  transform-origin: left;
+  transition: width 0.25s ease;
+  animation: hud-grow 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: 0.08s;
 }
 
-.status-success {
-  background: var(--status-success);
+/* Waiting on a response: a sliver of light runs along the empty track. */
+.dur-track.is-pending {
+  overflow: hidden;
 }
 
-.status-redirect {
-  background: var(--status-redirect);
-}
-
-.status-client-error {
-  background: var(--status-client-error);
-}
-
-.status-server-error {
-  background: var(--status-server-error);
-}
-
-.status-error {
-  background: var(--error-strong);
+.dur-track.is-pending::after {
+  content: "";
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--warning);
+  animation: hud-indeterminate 1.1s ease-in-out infinite;
 }

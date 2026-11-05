@@ -179,6 +179,11 @@ function createWindow() {
     height: 900,
     title: "Rexpo Network Inspector",
     icon: resolveIconPath(),
+    backgroundColor: "#07090a",
+    // macOS: the renderer's top bar doubles as the title bar.
+    ...(process.platform === "darwin"
+      ? { titleBarStyle: "hiddenInset" as const, trafficLightPosition: { x: 14, y: 13 } }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

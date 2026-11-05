@@ -1,0 +1,174 @@
+.top-bar {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  height: 42px;
+  padding: 0 12px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+}
+
+/* Clear the macOS traffic lights (see trafficLightPosition in electron/main.ts). */
+.top-bar-mac {
+  padding-left: 84px;
+}
+
+.top-bar button {
+  -webkit-app-region: no-drag;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-right: 18px;
+  margin-right: 6px;
+  border-right: 1px solid var(--border);
+  color: var(--accent);
+  user-select: none;
+}
+
+.brand-mark {
+  filter: drop-shadow(var(--text-glow));
+}
+
+:root[data-theme="light"] .brand-mark,
+:root[data-fx="off"] .brand-mark {
+  filter: none;
+}
+
+.brand-name {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.brand-slash {
+  margin: 0 1px;
+  color: var(--accent);
+  text-shadow: var(--text-glow);
+}
+
+.brand-sub {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.tab-navigation {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.tab-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 13px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.1s ease, background 0.1s ease;
+}
+
+.tab-button:hover {
+  color: var(--text-primary);
+  background: var(--hover-overlay-soft);
+}
+
+.tab-button.active {
+  color: var(--accent);
+  background: linear-gradient(to top, var(--accent-bg-strong), transparent 80%);
+  text-shadow: var(--text-glow);
+}
+
+/* Lit edge that slides between tabs and "plugs in" to the panel below. */
+.tab-indicator {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: var(--glow);
+  pointer-events: none;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tab-count {
+  animation: hud-tick 0.45s ease-out;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  text-shadow: none;
+}
+
+.tab-button.active .tab-count {
+  color: var(--accent);
+  opacity: 0.75;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-left: 12px;
+}
+
+.settings-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
+}
+
+.settings-button .icon {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.settings-button:hover .icon {
+  transform: rotate(60deg);
+}
+
+.settings-button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: var(--glow);
+}
+
+/* Narrow windows: the tabs need the room more than the wordmark does. */
+@media (max-width: 1040px) {
+  .brand-name {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .tab-button {
+    padding: 0 9px;
+    letter-spacing: 0.04em;
+  }
+
+  .tab-count {
+    display: none;
+  }
+}

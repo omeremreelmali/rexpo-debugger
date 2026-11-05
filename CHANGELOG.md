@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### 🎨 Changed — terminal-grade redesign of the desktop UI
+
+- New phosphor dark theme and line-printer light theme, set entirely in the
+  bundled JetBrains Mono, with an SVG icon set replacing emoji.
+- New top bar with tabs, a filter bar with one-click method, status and level
+  chips, and a status line with live stats (error count, average, p95, event
+  rate).
+- Network table separates URL origin, path and query and adds duration bars and
+  failure stripes; request details gain a summary strip on every tab.
+- `Cmd/Ctrl+1…4` switches tabs and `/` focuses search. Search, filters, Pause
+  and Clear now only appear on the Network and Console tabs.
+- Pending requests no longer render as errors.
+- Motion throughout: sliding tab indicator, panel scan on tab switch, cascading
+  rows, duration bars that grow, a decrypt effect on request details, flashing
+  state values that changed, and a CRT-style modal open.
+- Settings → Appearance → Effects & animations toggles scanlines, glow, animation
+  and the boot log.
+
 ## [1.5.0] - 2026-09-01
 
 ### ✨ Added — safe file preview and actions

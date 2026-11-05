@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StoreEntry, useStores } from "../state/StateContext";
+import { DecodeText } from "./DecodeText";
+import { HudEmpty } from "./HudEmpty";
+import { Icon } from "./Icons";
 import "./StatePanel.css";
 
 /**
@@ -21,7 +24,7 @@ export function StatePanel() {
     <div className="state-panel">
       <div className="state-left">
         <header className="state-left-header">
-          <h2>🧩 State</h2>
+          <h2><Icon name="nodes" /> State</h2>
           {stores.length > 0 && (
             <button
               className="state-clear-btn"
@@ -35,15 +38,16 @@ export function StatePanel() {
         </header>
 
         {stores.length === 0 ? (
-          <div className="state-empty">
-            <div className="state-empty-icon">🧩</div>
-            <p>No stores connected.</p>
-            <p className="state-empty-hint">
-              In your app, call <code>initStateAgent()</code> then{" "}
-              <code>attachZustandStore(useStore)</code> or{" "}
-              <code>attachReduxStore(store)</code>.
-            </p>
-          </div>
+          <HudEmpty
+            title="No stores connected"
+            hint={
+              <>
+                In your app, call <code>initStateAgent()</code> then{" "}
+                <code>attachZustandStore(useStore)</code> or{" "}
+                <code>attachReduxStore(store)</code>.
+              </>
+            }
+          />
         ) : (
           <ul className="state-store-list">
             {stores.map((s) => (
@@ -75,10 +79,7 @@ export function StatePanel() {
           onQuery={setQuery}
         />
       ) : (
-        <div className="state-no-selection">
-          <div className="state-no-selection-icon">👈</div>
-          <p>Select a store</p>
-        </div>
+        <HudEmpty radar title="Awaiting state snapshots" hint="Attached stores appear in the list on the left." />
       )}
     </div>
   );
@@ -117,17 +118,19 @@ function StoreDetails({
             <span className={`state-lib-badge lib-${store.lib}`}>
               {store.lib}
             </span>
-            <h2>{store.name}</h2>
+            <h2>
+              <DecodeText text={store.name} />
+            </h2>
           </div>
           {isLive ? (
-            <span className="store-live-badge">● Live</span>
+            <span className="store-live-badge"><span className="store-live-dot" /> Live</span>
           ) : (
             <button
               className="store-backtolive"
               type="button"
               onClick={() => setPinnedAt(null)}
             >
-              ← Back to live
+              <Icon name="arrowLeft" /> Back to live
             </button>
           )}
         </header>
@@ -147,7 +150,7 @@ function StoreDetails({
               onClick={() => onQuery("")}
               type="button"
             >
-              ✕
+              <Icon name="x" />
             </button>
           )}
         </div>
@@ -310,13 +313,27 @@ function JsonNode({
   const [open, setOpen] = useState(depth < 2);
   const expanded = query ? true : open;
 
+  // Flash a value when it differs from what this row showed before, whether the
+  // store updated or the user scrubbed to another snapshot.
+  const leafText = node.kind === "leaf" ? node.text : null;
+  const previousLeaf = useRef(leafText);
+  const [changes, setChanges] = useState(0);
+  useEffect(() => {
+    if (previousLeaf.current !== leafText) {
+      previousLeaf.current = leafText;
+      setChanges((count) => count + 1);
+    }
+  }, [leafText]);
+
   if (query && !subtreeMatches(keyLabel, value, query)) return null;
 
   if (node.kind === "leaf") {
     return (
       <div className="json-row" style={{ paddingLeft: depth * 14 }}>
         {keyLabel !== null && <span className="json-key">{keyLabel}:</span>}
-        <span className={`json-leaf ${node.cls}`}>{node.text}</span>
+        <span key={changes} className={`json-leaf ${node.cls} ${changes > 0 ? "j-changed" : ""}`}>
+          {node.text}
+        </span>
       </div>
     );
   }
