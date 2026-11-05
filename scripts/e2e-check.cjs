@@ -91,8 +91,12 @@ function launch(profile) {
 }
 async function quit() {
   cdp?.close();
+  const started = Date.now();
+  const exited = new Promise((r) => app.once("exit", () => r(true)));
   app.kill("SIGTERM");
-  await sleep(2500);
+  const clean = await Promise.race([exited, sleep(15000).then(() => false)]);
+  check("app quits within 15s", clean, `${Date.now() - started}ms`);
+  if (!clean) app.kill("SIGKILL");
 }
 const send = (method, params = {}) =>
   new Promise((resolve) => {
@@ -102,7 +106,8 @@ const send = (method, params = {}) =>
   });
 async function attach() {
   let page;
-  for (let i = 0; i < 50 && !page; i++) {
+  // The first launch of a freshly signed app can spend a while in Gatekeeper.
+  for (let i = 0; i < 200 && !page; i++) {
     try {
       page = (await (await fetch("http://127.0.0.1:9222/json")).json()).find((t) => t.type === "page");
     } catch {}
@@ -442,7 +447,7 @@ async function portChecks(profile) {
     out("FAIL  timed out");
     app?.kill("SIGTERM");
     process.exit(2);
-  }, 240000);
+  }, 360000);
   await new Promise((r) => origin.listen(0, r));
   const profile = path.join(TMP, "main");
   launch(profile);
