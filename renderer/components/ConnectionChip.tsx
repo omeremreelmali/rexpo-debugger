@@ -79,7 +79,7 @@ export function ConnectionChip() {
     );
   }
 
-  const { interfaces, port, connectedClients } = info;
+  const { interfaces, port, connectedClients, listening, serverError } = info;
   const hasInterfaces = interfaces.length > 0;
   const hasMultiple = interfaces.length > 1;
 
@@ -93,12 +93,12 @@ export function ConnectionChip() {
     return interfaces[0];
   })();
 
-  const dotClass = !hasInterfaces
+  const dotClass = !hasInterfaces || !listening
     ? "connection-dot-error"
     : connectedClients > 0
     ? "connection-dot-active"
     : "connection-dot-listening";
-  const linkLabel = !hasInterfaces ? "down" : connectedClients > 0 ? "link" : "listen";
+  const linkLabel = !hasInterfaces || !listening ? "down" : connectedClients > 0 ? "link" : "listen";
 
   const handleSelect = (iface: NetworkInterfaceInfo) => {
     setSelectedAddress(iface.address);
@@ -109,7 +109,7 @@ export function ConnectionChip() {
   const handleCopy = async (e: React.MouseEvent, address: string) => {
     e.stopPropagation();
     try {
-      await navigator.clipboard.writeText(buildWsUrl(address, port));
+      await navigator.clipboard.writeText(manualUrl ?? buildWsUrl(address, port));
       setCopiedAddress(address);
       setTimeout(() => setCopiedAddress(null), 1500);
     } catch (err) {
@@ -129,7 +129,9 @@ export function ConnectionChip() {
         className={`connection-chip ${hasMultiple && !manualUrl ? "connection-chip-clickable" : ""}`}
         onClick={() => hasMultiple && !manualUrl && setIsOpen(!isOpen)}
         title={
-          manualUrl
+          !listening
+            ? `Not listening: ${serverError ?? "server stopped"}. Pick another port in Settings.`
+            : manualUrl
             ? `Manual override (Settings → Connection → Manual host:port): ${primaryUrl}`
             : hasMultiple
             ? "Click to pick a different network interface"
@@ -142,7 +144,9 @@ export function ConnectionChip() {
           {linkLabel}
         </span>
         {manualUrl && <span className="connection-manual-badge">M</span>}
-        <span className="connection-text">{primaryUrl}</span>
+        <span className="connection-text">
+          {listening ? primaryUrl : `port ${port} unavailable`}
+        </span>
         {connectedClients > 0 && (
           <span className="connection-count" title={`${connectedClients} client${connectedClients === 1 ? "" : "s"} connected`}>
             {connectedClients}
@@ -152,7 +156,7 @@ export function ConnectionChip() {
         <button
           className="connection-copy"
           onClick={(e) => selectedInterface && handleCopy(e, selectedInterface.address)}
-          title="URL'yi kopyala"
+          title="Copy URL"
           type="button"
         >
           <Icon name={selectedInterface && copiedAddress === selectedInterface.address ? "check" : "copy"} />
@@ -181,7 +185,7 @@ export function ConnectionChip() {
                 <button
                   className="connection-copy"
                   onClick={(e) => handleCopy(e, iface.address)}
-                  title="URL'yi kopyala"
+                  title="Copy URL"
                   type="button"
                 >
                   <Icon name={copiedAddress === iface.address ? "check" : "copy"} />

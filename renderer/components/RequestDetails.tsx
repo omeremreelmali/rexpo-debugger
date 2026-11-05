@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useNetwork } from "../state/NetworkContext";
 import { generateCurlCommand, copyToClipboard } from "../utils/curlGenerator";
-import { replayRequest } from "../utils/replayRequest";
-import { getStatusClass } from "../utils/requestStatus";
+import { hasPartialBody, replayRequest } from "../utils/replayRequest";
+import { getStatusClass, getStatusLabel } from "../utils/requestStatus";
 import { JsonViewer, TextViewer } from "./JsonViewer";
 import { FormDataViewer } from "./FormDataViewer";
 import { FindInContent } from "./FindInContent";
@@ -10,6 +10,7 @@ import { DecodeText } from "./DecodeText";
 import { HudEmpty } from "./HudEmpty";
 import { Icon } from "./Icons";
 import { TabIndicator } from "./TabIndicator";
+import { useToast } from "./Toast";
 import { UrlText } from "./UrlText";
 import "./RequestDetails.css";
 
@@ -19,6 +20,7 @@ export function RequestDetails() {
   const { state } = useNetwork();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [copySuccess, setCopySuccess] = useState(false);
+  const toast = useToast();
 
   const selectedRequest = useMemo(() => {
     if (!state.selectedRequestId) return null;
@@ -33,13 +35,17 @@ export function RequestDetails() {
 
     if (success) {
       setCopySuccess(true);
+      if (hasPartialBody(selectedRequest.requestBodySnippet)) {
+        toast.show("Copied, but the body was truncated at capture", "info");
+      }
       setTimeout(() => setCopySuccess(false), 2000);
     }
   };
 
-  const handleReplay = () => {
+  const handleReplay = async () => {
     if (!selectedRequest) return;
-    replayRequest(selectedRequest);
+    const result = await replayRequest(selectedRequest);
+    toast.show(result.message, result.ok ? "success" : "error");
   };
 
   if (!selectedRequest) {
@@ -101,7 +107,7 @@ export function RequestDetails() {
             className={`method-badge method-${selectedRequest.method.toLowerCase()}`}
           />
           <DecodeText
-            text={selectedRequest.isError ? "ERR" : String(selectedRequest.status || "···")}
+            text={getStatusLabel(selectedRequest)}
             className={`status-badge ${getStatusClass(selectedRequest)}`}
           />
           {selectedRequest.statusText && (
@@ -174,9 +180,8 @@ export function RequestDetails() {
               <div className="info-row">
                 <span className="info-label">Status:</span>
                 <span className="info-value">
-                  {selectedRequest.isError
-                    ? "ERROR"
-                    : selectedRequest.status || "Pending"}
+                  {selectedRequest.status ||
+                    (selectedRequest.isError ? "ERROR" : "Pending")}
                   {selectedRequest.statusText &&
                     ` (${selectedRequest.statusText})`}
                 </span>

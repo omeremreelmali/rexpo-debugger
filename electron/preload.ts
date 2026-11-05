@@ -17,9 +17,8 @@ contextBridge.exposeInMainWorld("electron", {
   removeNetworkMessageListener: () => {
     ipcRenderer.removeAllListeners("network-message");
   },
-  sendCommand: (command: CommandMessage) => {
-    ipcRenderer.send("send-command", command);
-  },
+  sendCommand: (command: CommandMessage): Promise<{ delivered: number }> =>
+    ipcRenderer.invoke("send-command", command),
   getConnectionInfo: (): Promise<ConnectionInfo> =>
     ipcRenderer.invoke("get-connection-info"),
   setMdnsEnabled: (enabled: boolean): Promise<{ mdnsRunning: boolean }> =>
@@ -74,7 +73,7 @@ contextBridge.exposeInMainWorld("electron", {
 export interface ElectronAPI {
   onNetworkMessage: (callback: (message: NetworkMessage) => void) => void;
   removeNetworkMessageListener: () => void;
-  sendCommand: (command: CommandMessage) => void;
+  sendCommand: (command: CommandMessage) => Promise<{ delivered: number }>;
   getConnectionInfo: () => Promise<ConnectionInfo>;
   setMdnsEnabled: (enabled: boolean) => Promise<{ mdnsRunning: boolean }>;
   setNetworkPort: (

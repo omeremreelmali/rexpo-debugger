@@ -112,9 +112,9 @@ export function CollectionsPanel() {
     startedAt: req.createdAt,
   });
 
-  const handleReplay = (req: SavedRequest) => {
-    replayRequest(toReplayShape(req));
-    toast.show("Replay sent", "success");
+  const handleReplay = async (req: SavedRequest) => {
+    const result = await replayRequest(toReplayShape(req));
+    toast.show(result.message, result.ok ? "success" : "error");
   };
 
   const handleCopy = async (text: string, label: string) => {
@@ -128,7 +128,7 @@ export function CollectionsPanel() {
   const handleDelete = (req: SavedRequest) => {
     deleteRequest(req.id);
     if (selectedId === req.id) setSelectedId(null);
-    toast.show("Saved request silindi", "info");
+    toast.show("Saved request deleted", "info");
   };
 
   /** Turn a parsed cURL command into a draft request, then open Save. */
@@ -201,7 +201,7 @@ export function CollectionsPanel() {
       icon: <Icon name="code" />,
       label: "Copy as cURL",
       onClick: () =>
-        void handleCopy(generateCurlCommand(toReplayShape(req)), "cURL komutu"),
+        void handleCopy(generateCurlCommand(toReplayShape(req)), "cURL"),
     },
     { id: "sep-2", label: "", separator: true },
     {
@@ -385,7 +385,7 @@ export function CollectionsPanel() {
             onCopyCurl={() =>
               void handleCopy(
                 generateCurlCommand(toReplayShape(selected)),
-                "cURL komutu"
+                "cURL"
               )
             }
           />
@@ -435,7 +435,7 @@ export function CollectionsPanel() {
               onClick: () => {
                 deleteCollection(groupMenu.name);
                 toast.show(
-                  `"${groupMenu.name}" silindi — istekler Uncategorized'a taşındı`,
+                  `"${groupMenu.name}" deleted, requests moved to Uncategorized`,
                   "info"
                 );
               },
@@ -454,7 +454,7 @@ export function CollectionsPanel() {
           onCancel={() => setNewCollectionOpen(false)}
           onConfirm={(name) => {
             createCollection(name);
-            toast.show(`Collection "${name}" oluşturuldu`, "success");
+            toast.show(`Collection "${name}" created`, "success");
             setNewCollectionOpen(false);
           }}
         />

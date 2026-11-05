@@ -19,6 +19,7 @@ interface FormDataViewerProps {
 type FileAction = "preview" | "save" | "open";
 type FileUiState = { loading?: FileAction; previewUrl?: string; mimeType?: string; message?: string; error?: string };
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const FILE_TRANSFER_TIMEOUT_MS = 30_000;
 
 /**
  * Renders a captured `multipart/form-data` body: one row per field, with file
@@ -74,12 +75,22 @@ export function FormDataViewer({ parts, sourceClientId }: FormDataViewerProps) {
     return unsubscribe;
   }, [parts]);
 
-  const runFileAction = (part: FormDataPart, index: number, action: FileAction) => {
+  const failFileAction = (transferId: string, index: number, error: string) => {
+    // Already answered, so there is nothing to fail.
+    if (!pending.current.delete(transferId)) return;
+    setFileStates((current) => ({ ...current, [index]: { error } }));
+  };
+
+  const runFileAction = async (part: FormDataPart, index: number, action: FileAction) => {
     if (!part.uri) return;
     const transferId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     pending.current.set(transferId, { index, action });
     setFileStates((current) => ({ ...current, [index]: { loading: action } }));
-    window.electron.sendCommand({
+    window.setTimeout(
+      () => failFileAction(transferId, index, "No response from the device"),
+      FILE_TRANSFER_TIMEOUT_MS
+    );
+    const { delivered } = await window.electron.sendCommand({
       type: "command",
       command: "request_file",
       targetClientId: sourceClientId,
@@ -91,6 +102,7 @@ export function FormDataViewer({ parts, sourceClientId }: FormDataViewerProps) {
         maxBytes: MAX_FILE_BYTES,
       },
     });
+    if (delivered === 0) failFileAction(transferId, index, "No connected app to read the file from");
   };
 
   return (

@@ -360,7 +360,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
             <label className="settings-row">
               <div className="settings-row-label">
-                <span>Manuel host:port override</span>
+                <span>Manual host:port override</span>
                 <span className="settings-row-hint">
                   Leave empty to use auto-detect. The header chip displays this
                   value and shows an "M" badge to indicate the manual override.

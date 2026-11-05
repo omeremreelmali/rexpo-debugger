@@ -11,7 +11,7 @@ declare global {
     electron: {
       onNetworkMessage: (callback: (message: any) => void) => void;
       removeNetworkMessageListener: () => void;
-      sendCommand: (command: any) => void;
+      sendCommand: (command: any) => Promise<{ delivered: number }>;
       getConnectionInfo: () => Promise<ConnectionInfo>;
       setMdnsEnabled: (enabled: boolean) => Promise<{ mdnsRunning: boolean }>;
       setNetworkPort: (

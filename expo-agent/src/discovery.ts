@@ -51,6 +51,15 @@ function buildWsUrl(host: string, port: number): string {
 }
 
 /**
+ * Tells the desktop which agent owns a socket, so it can send commands to the
+ * network agent only. A query string goes unnoticed by older desktop builds.
+ */
+export function withAgentKind(wsUrl: string, kind: "network" | "console" | "state"): string {
+  const separator = wsUrl.includes("?") ? "&" : /^wss?:\/\/[^/]+$/i.test(wsUrl) ? "/?" : "?";
+  return `${wsUrl}${separator}agent=${kind}`;
+}
+
+/**
  * Picks the most-likely-reachable IPv4 from a discovered service.
  *
  * On macOS/Windows it's common to have multiple interfaces advertised over

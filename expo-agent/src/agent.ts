@@ -84,7 +84,7 @@ export type InitOptions = {
   discoveryTimeoutMs?: number;
 };
 
-import { discoverDebugger, resetDiscoveryCache } from "./discovery";
+import { discoverDebugger, resetDiscoveryCache, withAgentKind } from "./discovery";
 
 let initialized = false;
 let socket: WebSocket | null = null;
@@ -218,7 +218,7 @@ function errorLog(...args: any[]) {
 function connectSocket(wsUrl: string) {
   try {
     debugLog("[NetworkAgent] 🔄 Connecting to inspector:", wsUrl);
-    socket = new WebSocket(wsUrl);
+    socket = new WebSocket(withAgentKind(wsUrl, "network"));
 
     socket.onopen = () => {
       debugLog("[NetworkAgent] ✅ Connected to inspector:", wsUrl);
@@ -490,7 +490,7 @@ export function initNetworkAgent(options: InitOptions = {}) {
     // Send request message
     debugLog(
       `[NetworkAgent] 🚀 Capturing ${method} request:`,
-      url.substring(0, 80)
+      String(url).substring(0, 80)
     );
     safeSend(socket, {
       type: "request",
@@ -507,39 +507,42 @@ export function initNetworkAgent(options: InitOptions = {}) {
     try {
       // Call original fetch
       const response = await originalFetch(input, init);
-
-      // Clone response (to be able to read body)
-      const clone = response.clone();
-
-      // Read response body (as text)
-      let responseText = "";
-      try {
-        responseText = await clone.text();
-      } catch (readError) {
-        debugLog("[NetworkAgent] Failed to read response body:", readError);
-      }
-
-      const durationMs = Date.now() - startTime;
-
-      // Normalize response headers
       const responseHeaders = normalizeHeaders(response.headers);
 
-      // Send response message
-      debugLog(
-        `[NetworkAgent] 📥 Capturing response: ${response.status} (${durationMs}ms)`
-      );
-      safeSend(socket, {
-        type: "response",
-        id,
-        url,
-        status: response.status,
-        statusText: response.statusText,
-        responseHeaders,
-        responseBodySnippet: createTextSnippet(responseText, maxBodyLength),
-        durationMs,
-        finishedAt: new Date().toISOString(),
-        isError: false,
-      });
+      const sendResponse = (responseBodySnippet?: string) => {
+        const durationMs = Date.now() - startTime;
+        debugLog(
+          `[NetworkAgent] 📥 Capturing response: ${response.status} (${durationMs}ms)`
+        );
+        safeSend(socket, {
+          type: "response",
+          id,
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          responseHeaders,
+          responseBodySnippet,
+          durationMs,
+          finishedAt: new Date().toISOString(),
+          isError: false,
+        });
+      };
+
+      // The body is read on the side so the app gets its Response right away:
+      // waiting here would hang any fetch whose body never ends.
+      const uncaptured = describeUncapturedBody(responseHeaders);
+      if (uncaptured) {
+        sendResponse(uncaptured);
+      } else {
+        // Promise.resolve().then() so a clone() failure can't reach the app.
+        Promise.resolve()
+          .then(() => response.clone().text())
+          .then((text) => sendResponse(createTextSnippet(text, maxBodyLength)))
+          .catch((readError) => {
+            debugLog("[NetworkAgent] Failed to read response body:", readError);
+            sendResponse();
+          });
+      }
 
       return response;
     } catch (err: any) {
@@ -568,286 +571,9 @@ export function initNetworkAgent(options: InitOptions = {}) {
 
   global.fetch = interceptedFetch;
 
-  // ⭐ ADD AXIOS INTERCEPTOR (if available)
-  try {
-    // Try to get axios from global scope (if user has imported it)
-    const axios = (global as any).axios;
-
-    if (axios && axios.interceptors) {
-      debugLog("[NetworkAgent] 🔧 Setting up Axios interceptors");
-
-      // Log existing interceptor count
-      debugLog("[NetworkAgent] 📊 Existing interceptors (global):", {
-        requestCount: (axios.interceptors.request as any).handlers?.length || 0,
-        responseCount:
-          (axios.interceptors.response as any).handlers?.length || 0,
-      });
-
-      // Request interceptor
-      axios.interceptors.request.use(
-        (config: any) => {
-          if (!config) {
-            debugLog(
-              "[NetworkAgent] ⚠️ Empty config in axios request interceptor"
-            );
-            return config;
-          }
-
-          const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-          const startedAt = new Date().toISOString();
-          const startTime = Date.now();
-
-          // Save metadata to both config and WeakMap
-          const metadata = { id, startedAt, startTime };
-          config.metadata = metadata;
-          requestMetadataMap.set(config, metadata);
-
-          // BONUS: Add custom header (as last resort)
-          if (!config.headers) config.headers = {};
-          config.headers["X-Network-Inspector-ID"] = id;
-
-          const url = config.url || "";
-          const fullUrl = config.baseURL ? `${config.baseURL}${url}` : url;
-          const method = (config.method || "GET").toUpperCase();
-
-          debugLog(
-            `[NetworkAgent] 🚀 [AXIOS] Capturing ${method} request:`,
-            fullUrl.substring(0, 80)
-          );
-
-          safeSend(socket, {
-            type: "request",
-            id,
-            url: fullUrl,
-            method,
-            requestHeaders: config.headers || {},
-            ...describeRequestBody(
-              config.data,
-              normalizeHeaders(config.headers),
-              maxBodyLength
-            ),
-            startedAt,
-          });
-
-          return config;
-        },
-        (error: any) => {
-          errorLog("[NetworkAgent] ❌ [AXIOS] Request error:", error);
-          return Promise.reject(error);
-        }
-      );
-
-      // Response interceptor
-      axios.interceptors.response.use(
-        (response: any) => {
-          debugLog(
-            "[NetworkAgent] 🔍 [AXIOS] Response interceptor triggered (global)"
-          );
-
-          if (!response) {
-            debugLog(
-              "[NetworkAgent] ⚠️ [AXIOS] No response object (global)"
-            );
-            return response;
-          }
-
-          // Find metadata - try several different methods
-          let metadata: any = null;
-          let id: string | undefined;
-          let startTime: number | undefined;
-
-          if (response.config) {
-            // Method 1: Get from WeakMap
-            metadata = requestMetadataMap.get(response.config);
-
-            // Method 2: Get from Config.metadata
-            if (!metadata && response.config.metadata) {
-              metadata = response.config.metadata;
-            }
-
-            // Method 3: Get ID from request header
-            if (
-              !metadata &&
-              response.config.headers &&
-              response.config.headers["X-Network-Inspector-ID"]
-            ) {
-              id = response.config.headers["X-Network-Inspector-ID"];
-              debugLog(
-                "[NetworkAgent] 🔄 Recovered ID from request header (global):",
-                id
-              );
-            }
-          }
-
-          // Method 4: Get ID from response header (if API echoes it)
-          if (
-            !metadata &&
-            !id &&
-            response.headers &&
-            response.headers["x-network-inspector-id"]
-          ) {
-            id = response.headers["x-network-inspector-id"];
-            debugLog(
-              "[NetworkAgent] 🔄 Recovered ID from response header (global):",
-              id
-            );
-          }
-
-          if (!response.config) {
-            debugLog(
-              "[NetworkAgent] ⚠️ [AXIOS] Response.config missing (global), ID recovered:",
-              !!id
-            );
-            if (!id) {
-              debugLog(
-                "[NetworkAgent] 📊 Orphan response - cannot track (global):",
-                {
-                  status: response.status,
-                  hasData: !!response.data,
-                }
-              );
-              return response;
-            }
-          }
-
-          // Get values from metadata
-          if (metadata) {
-            if (!id) id = metadata.id;
-            if (!startTime) startTime = metadata.startTime;
-          }
-
-          const startedAt = metadata?.startedAt;
-
-          debugLog("[NetworkAgent] 🔍 [AXIOS] Response metadata (global):", {
-            hasId: !!id,
-            hasMetadata: !!metadata,
-            fromWeakMap: response.config
-              ? requestMetadataMap.has(response.config)
-              : false,
-            fromConfig: !!response.config?.metadata,
-            status: response.status,
-          });
-
-          if (id && startTime) {
-            const durationMs = Date.now() - startTime;
-            const url = response.config.url || "";
-            const fullUrl = response.config.baseURL
-              ? `${response.config.baseURL}${url}`
-              : url;
-
-            debugLog(
-              `[NetworkAgent] 📥 [AXIOS] Capturing response: ${response.status} (${durationMs}ms)`
-            );
-
-            safeSend(socket, {
-              type: "response",
-              id,
-              url: fullUrl,
-              status: response.status,
-              statusText: response.statusText,
-              responseHeaders: response.headers || {},
-              responseBodySnippet: response.data
-                ? createTextSnippet(
-                    typeof response.data === "string"
-                      ? response.data
-                      : JSON.stringify(response.data),
-                    maxBodyLength
-                  )
-                : undefined,
-              durationMs,
-              finishedAt: new Date().toISOString(),
-              isError: false,
-            });
-          }
-
-          return response;
-        },
-        (error: any) => {
-          // First try to get from WeakMap
-          let metadata = error.config
-            ? requestMetadataMap.get(error.config)
-            : null;
-          if (!metadata && error.config?.metadata) {
-            metadata = error.config.metadata;
-          }
-
-          const { id, startedAt, startTime } = metadata || {};
-
-          if (id && startTime) {
-            const durationMs = Date.now() - startTime;
-            const url = error.config?.url || "";
-            const fullUrl = error.config?.baseURL
-              ? `${error.config.baseURL}${url}`
-              : url;
-
-            errorLog(
-              `[NetworkAgent] ❌ [AXIOS] Request failed:`,
-              error.message
-            );
-
-            safeSend(socket, {
-              type: "response",
-              id,
-              url: fullUrl,
-              status: error.response?.status || 0,
-              statusText: error.response?.statusText || "NETWORK_ERROR",
-              responseHeaders: error.response?.headers || undefined,
-              responseBodySnippet: error.response?.data
-                ? createTextSnippet(
-                    typeof error.response.data === "string"
-                      ? error.response.data
-                      : JSON.stringify(error.response.data),
-                    maxBodyLength
-                  )
-                : undefined,
-              durationMs,
-              finishedAt: new Date().toISOString(),
-              isError: true,
-              errorMessage: error.message,
-            });
-          }
-
-          return Promise.reject(error);
-        }
-      );
-
-      // Move interceptors to the front (run before other interceptors)
-      try {
-        const responseHandlers = (axios.interceptors.response as any).handlers;
-        if (responseHandlers && responseHandlers.length > 1) {
-          // The last added (ours) is at the end, move it to the front
-          const ourHandler = responseHandlers.pop();
-          if (ourHandler) {
-            responseHandlers.unshift(ourHandler);
-            debugLog(
-              "[NetworkAgent] 🔄 Moved response interceptor to front (global)"
-            );
-          }
-        }
-
-        const requestHandlers = (axios.interceptors.request as any).handlers;
-        if (requestHandlers && requestHandlers.length > 1) {
-          // The last added (ours) is at the end, move it to the front
-          const ourHandler = requestHandlers.pop();
-          if (ourHandler) {
-            requestHandlers.unshift(ourHandler);
-            debugLog(
-              "[NetworkAgent] 🔄 Moved request interceptor to front (global)"
-            );
-          }
-        }
-      } catch (e) {
-        debugLog(
-          "[NetworkAgent] ⚠️ Could not reorder interceptors (global):",
-          e
-        );
-      }
-
-      debugLog("[NetworkAgent] ✅ Axios interceptors configured");
-    }
-  } catch (axiosError) {
-    debugLog("[NetworkAgent] ℹ️ Axios not found, using fetch-only mode");
-  }
+  // Axios that was exposed globally. Other instances need addAxiosInstance().
+  const globalAxios = (global as any).axios;
+  if (globalAxios?.interceptors) attachAxiosInterceptors(globalAxios);
 
   debugLog("[NetworkAgent] 🔍 Network monitoring started");
 }
@@ -1244,6 +970,20 @@ function createBodySnippet(body: any, maxLen: number): string {
   }
 }
 
+/** Bodies that are binary or never end, which the agent doesn't try to read. */
+const UNCAPTURED_BODY = /^(image|video|audio|font)\/|octet-stream|event-stream|ndjson|application\/(pdf|zip|gzip)/i;
+const MAX_CAPTURED_RESPONSE_BYTES = 5 * 1024 * 1024;
+
+function describeUncapturedBody(headers: Record<string, string>): string | undefined {
+  const contentType = headers["content-type"] ?? "";
+  if (UNCAPTURED_BODY.test(contentType)) return `[${contentType} body not captured]`;
+  const length = Number(headers["content-length"]);
+  if (length > MAX_CAPTURED_RESPONSE_BYTES) {
+    return `[${formatBytes(length)} body not captured]`;
+  }
+  return undefined;
+}
+
 /**
  * Truncates text to specified length
  */
@@ -1271,61 +1011,62 @@ export function addAxiosInstance(axiosInstance: any) {
     errorLog("[NetworkAgent] ❌ Invalid axios instance");
     return;
   }
+  attachAxiosInterceptors(axiosInstance);
+}
 
-  debugLog("[NetworkAgent] 🔧 Adding interceptors to custom axios instance");
+/** The URL a request really goes to, including baseURL and params. */
+function axiosRequestUrl(instance: any, config: any): string {
+  let url: string | undefined;
+  try {
+    url = instance.getUri?.(config);
+  } catch {
+    // Fall through to the manual join.
+  }
+  url = url || config.url || "";
+  if (config.baseURL && !/^[a-z][a-z0-9+.-]*:\/\//i.test(url as string)) {
+    url = `${String(config.baseURL).replace(/\/+$/, "")}/${String(url).replace(/^\/+/, "")}`;
+  }
+  return url as string;
+}
 
-  // Log existing interceptor count
-  debugLog("[NetworkAgent] 📊 Existing interceptors:", {
-    requestCount:
-      (axiosInstance.interceptors.request as any).handlers?.length || 0,
-    responseCount:
-      (axiosInstance.interceptors.response as any).handlers?.length || 0,
-  });
+function axiosBodySnippet(data: any): string | undefined {
+  if (!data) return undefined;
+  try {
+    return createTextSnippet(
+      typeof data === "string" ? data : JSON.stringify(data),
+      maxBodyLength
+    );
+  } catch {
+    return "[unserializable body]";
+  }
+}
 
-  // Request interceptor
-  axiosInstance.interceptors.request.use(
+function attachAxiosInterceptors(instance: any) {
+  instance.interceptors.request.use(
     (config: any) => {
-      if (!config) {
-        debugLog(
-          "[NetworkAgent] ⚠️ Empty config in axios request interceptor"
-        );
-        return config;
-      }
+      if (!config) return config;
 
-      const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      const startedAt = new Date().toISOString();
-      const startTime = Date.now();
-
-      // Save metadata to both config and WeakMap
-      const metadata = { id, startedAt, startTime };
+      const metadata = {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        startedAt: new Date().toISOString(),
+        startTime: Date.now(),
+      };
       config.metadata = metadata;
       requestMetadataMap.set(config, metadata);
 
-      // BONUS: Add custom header (as last resort)
-      if (!config.headers) config.headers = {};
-      config.headers["X-Network-Inspector-ID"] = id;
-
-      const url = config.url || "";
-      const fullUrl = config.baseURL ? `${config.baseURL}${url}` : url;
+      const url = axiosRequestUrl(instance, config);
       const method = (config.method || "GET").toUpperCase();
-
-      debugLog(
-        `[NetworkAgent] 🚀 [AXIOS] Capturing ${method} request:`,
-        fullUrl.substring(0, 80)
-      );
+      const requestHeaders = normalizeHeaders(config.headers);
+      debugLog(`[NetworkAgent] 🚀 [AXIOS] Capturing ${method} request:`, url.substring(0, 80));
 
       safeSend(socket, {
         type: "request",
-        id,
-        url: fullUrl,
+        id: metadata.id,
+        url,
         method,
-        requestHeaders: config.headers || {},
-        ...describeRequestBody(
-          config.data,
-          normalizeHeaders(config.headers),
-          maxBodyLength
-        ),
-        startedAt,
+        requestHeaders,
+        ...describeRequestBody(config.data, requestHeaders, maxBodyLength),
+        startedAt: metadata.startedAt,
       });
 
       return config;
@@ -1336,195 +1077,67 @@ export function addAxiosInstance(axiosInstance: any) {
     }
   );
 
-  // Response interceptor
-  axiosInstance.interceptors.response.use(
+  const report = (config: any, fields: {
+    status: number;
+    statusText?: string;
+    headers?: any;
+    data?: any;
+    isError: boolean;
+    errorMessage?: string;
+  }) => {
+    const metadata = config && (requestMetadataMap.get(config) ?? config.metadata);
+    if (!metadata) return;
+    safeSend(socket, {
+      type: "response",
+      id: metadata.id,
+      url: axiosRequestUrl(instance, config),
+      status: fields.status,
+      statusText: fields.statusText,
+      responseHeaders: fields.headers ? normalizeHeaders(fields.headers) : undefined,
+      responseBodySnippet: axiosBodySnippet(fields.data),
+      durationMs: Date.now() - metadata.startTime,
+      finishedAt: new Date().toISOString(),
+      isError: fields.isError,
+      errorMessage: fields.errorMessage,
+    });
+  };
+
+  instance.interceptors.response.use(
     (response: any) => {
-      debugLog("[NetworkAgent] 🔍 [AXIOS] Response interceptor triggered");
-      debugLog(
-        "[NetworkAgent] 🔍 Response object keys:",
-        Object.keys(response || {})
-      );
-
-      if (!response) {
-        debugLog("[NetworkAgent] ⚠️ [AXIOS] No response object");
-        return response;
-      }
-
-      // Find metadata - try several different methods
-      let metadata: any = null;
-      let id: string | undefined;
-      let startTime: number | undefined;
-
-      if (response.config) {
-        // Method 1: Get from WeakMap
-        metadata = requestMetadataMap.get(response.config);
-
-        // Method 2: Get from Config.metadata
-        if (!metadata && response.config.metadata) {
-          metadata = response.config.metadata;
-        }
-
-        // Method 3: Get ID from request header
-        if (
-          !metadata &&
-          response.config.headers &&
-          response.config.headers["X-Network-Inspector-ID"]
-        ) {
-          id = response.config.headers["X-Network-Inspector-ID"];
-          debugLog(
-            "[NetworkAgent] 🔄 Recovered ID from request header:",
-            id
-          );
-        }
-      }
-
-      // Method 4: Get ID from response header (if API echoes it)
-      if (
-        !metadata &&
-        !id &&
-        response.headers &&
-        response.headers["x-network-inspector-id"]
-      ) {
-        id = response.headers["x-network-inspector-id"];
-        debugLog("[NetworkAgent] 🔄 Recovered ID from response header:", id);
-      }
-
-      if (!response.config) {
-        debugLog(
-          "[NetworkAgent] ⚠️ [AXIOS] Response.config missing, ID recovered:",
-          !!id
-        );
-        if (!id) {
-          debugLog("[NetworkAgent] 📊 Orphan response - cannot track:", {
-            status: response.status,
-            hasData: !!response.data,
-          });
-          return response;
-        }
-      }
-
-      // Get values from metadata
-      if (metadata) {
-        if (!id) id = metadata.id;
-        if (!startTime) startTime = metadata.startTime;
-      }
-
-      const startedAt = metadata?.startedAt;
-
-      debugLog("[NetworkAgent] 🔍 [AXIOS] Response metadata:", {
-        hasId: !!id,
-        hasMetadata: !!metadata,
-        fromWeakMap: response.config
-          ? requestMetadataMap.has(response.config)
-          : false,
-        fromConfig: !!response.config?.metadata,
-        status: response.status,
-      });
-
-      if (id && startTime) {
-        const durationMs = Date.now() - startTime;
-        const url = response.config.url || "";
-        const fullUrl = response.config.baseURL
-          ? `${response.config.baseURL}${url}`
-          : url;
-
-        debugLog(
-          `[NetworkAgent] 📥 [AXIOS] Capturing response: ${response.status} (${durationMs}ms)`
-        );
-
-        safeSend(socket, {
-          type: "response",
-          id,
-          url: fullUrl,
+      if (response) {
+        report(response.config, {
           status: response.status,
           statusText: response.statusText,
-          responseHeaders: response.headers || {},
-          responseBodySnippet: response.data
-            ? createTextSnippet(
-                typeof response.data === "string"
-                  ? response.data
-                  : JSON.stringify(response.data),
-                maxBodyLength
-              )
-            : undefined,
-          durationMs,
-          finishedAt: new Date().toISOString(),
+          headers: response.headers,
+          data: response.data,
           isError: false,
         });
       }
-
       return response;
     },
     (error: any) => {
-      // First try to get from WeakMap
-      let metadata = error.config ? requestMetadataMap.get(error.config) : null;
-      if (!metadata && error.config?.metadata) {
-        metadata = error.config.metadata;
-      }
-
-      const { id, startedAt, startTime } = metadata || {};
-
-      if (id && startTime) {
-        const durationMs = Date.now() - startTime;
-        const url = error.config?.url || "";
-        const fullUrl = error.config?.baseURL
-          ? `${error.config.baseURL}${url}`
-          : url;
-
-        errorLog(`[NetworkAgent] ❌ [AXIOS] Request failed:`, error.message);
-
-        safeSend(socket, {
-          type: "response",
-          id,
-          url: fullUrl,
-          status: error.response?.status || 0,
-          statusText: error.response?.statusText || "NETWORK_ERROR",
-          responseHeaders: error.response?.headers || undefined,
-          responseBodySnippet: error.response?.data
-            ? createTextSnippet(
-                typeof error.response.data === "string"
-                  ? error.response.data
-                  : JSON.stringify(error.response.data),
-                maxBodyLength
-              )
-            : undefined,
-          durationMs,
-          finishedAt: new Date().toISOString(),
-          isError: true,
-          errorMessage: error.message,
-        });
-      }
-
+      // A 4xx/5xx is a normal HTTP response. Only "no response at all" is an error.
+      report(error?.config, {
+        status: error?.response?.status || 0,
+        statusText: error?.response?.statusText || "NETWORK_ERROR",
+        headers: error?.response?.headers,
+        data: error?.response?.data,
+        isError: !error?.response,
+        errorMessage: error?.message,
+      });
       return Promise.reject(error);
     }
   );
 
-  // Move interceptors to the front (run before other interceptors)
+  // Run ours before the app's interceptors so we see the untouched traffic.
   try {
-    const responseHandlers = (axiosInstance.interceptors.response as any)
-      .handlers;
-    if (responseHandlers && responseHandlers.length > 1) {
-      // The last added (ours) is at the end, move it to the front
-      const ourHandler = responseHandlers.pop();
-      if (ourHandler) {
-        responseHandlers.unshift(ourHandler);
-        debugLog("[NetworkAgent] 🔄 Moved response interceptor to front");
-      }
-    }
-
-    const requestHandlers = (axiosInstance.interceptors.request as any)
-      .handlers;
-    if (requestHandlers && requestHandlers.length > 1) {
-      // The last added (ours) is at the end, move it to the front
-      const ourHandler = requestHandlers.pop();
-      if (ourHandler) {
-        requestHandlers.unshift(ourHandler);
-        debugLog("[NetworkAgent] 🔄 Moved request interceptor to front");
-      }
+    for (const manager of [instance.interceptors.response, instance.interceptors.request]) {
+      const handlers = (manager as any).handlers;
+      if (handlers?.length > 1) handlers.unshift(handlers.pop());
     }
   } catch (e) {
     debugLog("[NetworkAgent] ⚠️ Could not reorder interceptors:", e);
   }
 
-  debugLog("[NetworkAgent] ✅ Custom axios instance configured");
+  debugLog("[NetworkAgent] ✅ Axios interceptors configured");
 }

@@ -18,7 +18,7 @@
  * ```
  */
 
-import { discoverDebugger, resetDiscoveryCache } from "./discovery";
+import { discoverDebugger, resetDiscoveryCache, withAgentKind } from "./discovery";
 
 export type StateMessage = {
   type: "state";
@@ -147,7 +147,7 @@ async function establishConnection(strategy: ReconnectStrategy): Promise<void> {
 function connectSocket(wsUrl: string) {
   try {
     debugLog("🔄 Connecting to inspector:", wsUrl);
-    socket = new WebSocket(wsUrl);
+    socket = new WebSocket(withAgentKind(wsUrl, "state"));
     socket.onopen = () => {
       debugLog("✅ Connected to inspector:", wsUrl);
       reconnectAttempt = 0;

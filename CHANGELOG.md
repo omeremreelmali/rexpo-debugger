@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.1] - 2026-11-05
+
+Desktop 1.9.1 with agent `rexpo-debugger` 1.5.1.
+
+### 🐞 Fixed — desktop
+
+- Auto-clear no longer wipes startup requests, or another device's traffic: it
+  now runs only when the first socket connects, not on each agent's socket.
+- Malformed agent messages are validated instead of crashing the app, and an
+  error boundary keeps a render failure from blanking the window.
+- Replay reports whether an app received it, and still reaches the app after it
+  reconnects. A body that was truncated at capture is refused instead of being
+  sent corrupted. File actions fail with a message instead of loading forever.
+- Commands never go to every connected client, so a saved request's auth headers
+  and replays stay with one app.
+- Web pages can no longer connect to the WebSocket port.
+- The saved port now applies on launch, changing it actually moves connected
+  agents, and a busy port shows as `DOWN` instead of `LISTEN`.
+- Only one copy of the app runs at a time.
+- Status codes from older agents' axios errors show as `404` rather than `ERR`.
+- Pause keeps responses for requests already on screen, so they no longer stay
+  pending or return as `UNKNOWN` rows. The ERR filter no longer lists pending
+  requests.
+- `ws` updated to fix a high-severity advisory.
+
+### 🐞 Fixed — agent
+
+- `fetch` no longer waits on the debugger: the app gets its response right away,
+  and streams and binary bodies aren't read.
+- Axios URLs include `params` and `baseURL`, 4xx/5xx report their status, and the
+  `X-Network-Inspector-ID` header is no longer added to real requests.
+
 ## [1.9.0] - 2026-11-05
 
 ### 🎨 Changed — terminal-grade redesign of the desktop UI

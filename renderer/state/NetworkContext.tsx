@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef, ReactNode } from "react";
 import { NetworkMessage, RequestState, FilterMethod, FilterStatus, ConsoleLog, FilterLogLevel } from "../types";
+import { sanitizeNetworkMessage } from "../utils/sanitizeMessage";
 import { useSettings } from "./SettingsContext";
 
 export type TabType = "network" | "console" | "collections" | "state";
@@ -66,9 +67,11 @@ function trimLogs(arr: ConsoleLog[], max: number): ConsoleLog[] {
 function networkReducer(state: NetworkState, action: NetworkAction): NetworkState {
   switch (action.type) {
     case "ADD_MESSAGE": {
-      if (state.isPaused) return state;
-
       const message = action.payload;
+
+      // Pause stops new entries, but a request already on screen still gets
+      // its response. Otherwise it would stay pending forever after resuming.
+      if (state.isPaused && message.type !== "response") return state;
 
       // Handle console messages
       if (message.type === "console") {
@@ -146,29 +149,9 @@ function networkReducer(state: NetworkState, action: NetworkAction): NetworkStat
           };
           return { ...state, requests: updated };
         } else {
-          // Response arrived before request (edge case)
-          const newRequest: RequestState = {
-            id: message.id,
-            sourceClientId: message.sourceClientId,
-            url: message.url,
-            method: "UNKNOWN",
-            status: message.status,
-            statusText: message.statusText,
-            responseHeaders: message.responseHeaders,
-            responseBodySnippet: message.responseBodySnippet,
-            durationMs: message.durationMs,
-            startedAt: message.finishedAt,
-            finishedAt: message.finishedAt,
-            isError: message.isError,
-            errorMessage: message.errorMessage,
-          };
-          return {
-            ...state,
-            requests: trimRequests(
-              [newRequest, ...state.requests],
-              state.maxRequestHistory
-            ),
-          };
+          // Each socket delivers in order, so its request was deliberately
+          // dropped: captured while paused, cleared, or trimmed from history.
+          return state;
         }
       }
     }
@@ -282,7 +265,9 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    window.electron.onNetworkMessage((message: NetworkMessage) => {
+    window.electron.onNetworkMessage((raw: unknown) => {
+      const message = sanitizeNetworkMessage(raw);
+      if (!message) return;
       const flags = agentEnabledRef.current;
       if (message.type === "console" && !flags.console) return;
       if (

@@ -3,9 +3,9 @@ import { useNetwork } from "../state/NetworkContext";
 import { useSettings } from "../state/SettingsContext";
 import { RequestState } from "../types";
 import { copyToClipboard, generateCurlCommand } from "../utils/curlGenerator";
-import { replayRequest } from "../utils/replayRequest";
+import { hasPartialBody, replayRequest } from "../utils/replayRequest";
 import { saveResponseToFile } from "../utils/saveResponse";
-import { getStatusClass } from "../utils/requestStatus";
+import { getStatusClass, getStatusLabel, isPending, isTransportError } from "../utils/requestStatus";
 import { ContextMenu, ContextMenuItem } from "./ContextMenu";
 import { EditReplayModal } from "./EditReplayModal";
 import { SaveRequestModal } from "./SaveRequestModal";
@@ -53,7 +53,7 @@ export function NetworkTable() {
     if (state.filterStatus !== "ALL") {
       filtered = filtered.filter((r) => {
         if (state.filterStatus === "ERR") {
-          return r.isError || !r.status;
+          return isTransportError(r);
         }
         if (!r.status) return false;
         const statusStr = Math.floor(r.status / 100);
@@ -70,7 +70,7 @@ export function NetworkTable() {
   );
 
   const getRowClass = (request: RequestState): string => {
-    if (request.isError || (request.status ?? 0) >= 500) return "row-error";
+    if (isTransportError(request) || (request.status ?? 0) >= 500) return "row-error";
     if ((request.status ?? 0) >= 400) return "row-warn";
     return "";
   };
@@ -118,7 +118,10 @@ export function NetworkTable() {
         icon: <Icon name="code" />,
         label: "Copy as cURL",
         onClick: () =>
-          void copyWithToast(generateCurlCommand(request), "cURL komutu"),
+          void copyWithToast(
+            generateCurlCommand(request),
+            hasPartialBody(request.requestBodySnippet) ? "cURL with truncated body" : "cURL"
+          ),
       },
       {
         id: "copy-json",
@@ -147,9 +150,9 @@ export function NetworkTable() {
         id: "replay",
         icon: <Icon name="replay" />,
         label: "Replay",
-        onClick: () => {
-          replayRequest(request);
-          toast.show("Replay sent", "success");
+        onClick: async () => {
+          const result = await replayRequest(request);
+          toast.show(result.message, result.ok ? "success" : "error");
         },
       },
       {
@@ -230,11 +233,7 @@ export function NetworkTable() {
                   </td>
                   <td>
                     <span className={`status-badge ${getStatusClass(request)}`}>
-                      {request.isError
-                        ? "ERR"
-                        : request.status
-                        ? request.status
-                        : "···"}
+                      {getStatusLabel(request)}
                     </span>
                   </td>
                   <td className="url-cell" title={request.url}>
@@ -242,7 +241,7 @@ export function NetworkTable() {
                   </td>
                   <td className="col-duration dur-cell">
                     {formatDuration(request.durationMs)}
-                    {request.durationMs === undefined && !request.isError && !request.status && (
+                    {request.durationMs === undefined && isPending(request) && (
                       <span className="dur-track is-pending" />
                     )}
                     {request.durationMs !== undefined && (

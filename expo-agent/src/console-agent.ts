@@ -28,7 +28,7 @@ export type ConsoleMessage = {
   stack?: string;
 };
 
-import { discoverDebugger, resetDiscoveryCache } from "./discovery";
+import { discoverDebugger, resetDiscoveryCache, withAgentKind } from "./discovery";
 
 export type ConsoleAgentOptions = {
   /**
@@ -144,7 +144,7 @@ function errorLog(...args: any[]) {
 function connectSocket(wsUrl: string) {
   try {
     debugLog("🔄 Connecting to inspector:", wsUrl);
-    socket = new WebSocket(wsUrl);
+    socket = new WebSocket(withAgentKind(wsUrl, "console"));
 
     socket.onopen = () => {
       debugLog("✅ Connected to inspector:", wsUrl);

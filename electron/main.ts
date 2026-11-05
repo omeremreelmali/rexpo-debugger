@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import * as path from "path";
 import * as os from "os";
 import * as fs from "fs";
+import { IncomingMessage } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { Bonjour, Service } from "bonjour-service";
 import { CommandMessage, ConnectionInfo, NetworkInterfaceInfo } from "./types";
@@ -10,6 +11,8 @@ const DEFAULT_WS_PORT = 5051;
 const MDNS_SERVICE_TYPE = "rexpo";
 const MDNS_SERVICE_NAME = `Rexpo Debugger on ${os.hostname()}`;
 const NETWORK_POLL_INTERVAL_MS = 5000;
+/** Well above the largest legitimate frame: a 5 MB file transfer in base64. */
+const MAX_MESSAGE_BYTES = 16 * 1024 * 1024;
 
 let WS_PORT = DEFAULT_WS_PORT;
 let mainWindow: BrowserWindow | null = null;
@@ -21,7 +24,12 @@ let publishedService: Service | null = null;
 let lastInterfaceSignature = "";
 let networkPollTimer: NodeJS.Timeout | null = null;
 let nextClientId = 0;
-const clientIds = new WeakMap<WebSocket, string>();
+let serverError: string | null = null;
+let serverReady: Promise<void> = Promise.resolve();
+
+type AgentKind = "network" | "console" | "state";
+type ClientInfo = { id: string; kind?: AgentKind; lastActive: number };
+const clients = new WeakMap<WebSocket, ClientInfo>();
 
 function getLocalIPv4Addresses(): NetworkInterfaceInfo[] {
   const interfaces = os.networkInterfaces();
@@ -52,6 +60,8 @@ function getConnectionInfo(): ConnectionInfo {
     interfaces: getLocalIPv4Addresses(),
     port: WS_PORT,
     connectedClients: wss?.clients.size ?? 0,
+    listening: wss !== null,
+    serverError,
   };
 }
 
@@ -69,7 +79,8 @@ function interfaceSignature(): string {
 }
 
 function publishMdnsService() {
-  if (!bonjour) return;
+  // No server means nothing to advertise: agents would discover a dead port.
+  if (!bonjour || !wss) return;
 
   // CRITICAL: Properly unpublish the previous service before re-publishing.
   //
@@ -204,28 +215,91 @@ function createWindow() {
   });
 }
 
+function agentKindFromUrl(url?: string): AgentKind | undefined {
+  const kind = new URL(url ?? "/", "ws://agent").searchParams.get("agent");
+  return kind === "network" || kind === "console" || kind === "state" ? kind : undefined;
+}
+
+/** Older agents don't announce their kind, so it is also learned from traffic. */
+function noteClientActivity(client: ClientInfo, type?: string) {
+  if (type === "request" || type === "response") {
+    client.kind = "network";
+    client.lastActive = Date.now();
+  } else if (type === "console") {
+    client.kind = "console";
+  } else if (type === "state") {
+    client.kind = "state";
+  }
+}
+
+/**
+ * Picks who receives a command. Commands can carry auth headers, so they never
+ * go to everyone: the named client if it is still connected (its id changes on
+ * reconnect), else the most recently active network agent. Only when no agent
+ * has identified itself do they go to the unidentified sockets, which covers an
+ * older agent that has just reconnected and sent nothing yet.
+ */
+function resolveCommandTargets(targetClientId?: string): WebSocket[] {
+  if (!wss) return [];
+  const open = [...wss.clients].filter((c) => c.readyState === WebSocket.OPEN);
+
+  const exact = open.find((c) => clients.get(c)?.id === targetClientId);
+  if (targetClientId && exact) return [exact];
+
+  const network = open
+    .filter((c) => clients.get(c)?.kind === "network")
+    .sort((a, b) => (clients.get(b)?.lastActive ?? 0) - (clients.get(a)?.lastActive ?? 0));
+  if (network.length > 0) return [network[0]];
+
+  return open.filter((c) => !clients.get(c)?.kind);
+}
+
+/**
+ * Stops web pages from connecting: a browser sends an Origin the page can't
+ * forge, while native clients send none or one naming the host they dialed.
+ * Localhost origins stay allowed for agents running under Expo web.
+ */
+function isAllowedOrigin(origin: string | undefined, host: string | undefined): boolean {
+  if (!origin) return true;
+  try {
+    const { hostname } = new URL(origin);
+    if (["localhost", "127.0.0.1", "[::1]"].includes(hostname)) return true;
+    return host ? hostname === new URL(`ws://${host}`).hostname : false;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Attaches all WS event handlers to a WebSocketServer instance.
  * Called both for the initial server and any new server created during a
  * port-restart.
  */
 function attachWebSocketListeners(server: WebSocketServer) {
-  server.on("connection", (ws: WebSocket) => {
+  server.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     const clientId = `client-${Date.now()}-${++nextClientId}`;
-    clientIds.set(ws, clientId);
+    const client: ClientInfo = {
+      id: clientId,
+      kind: agentKindFromUrl(req.url),
+      lastActive: Date.now(),
+    };
+    clients.set(ws, client);
     console.log(`[Inspector] Client connected (total: ${server.clients.size})`);
     broadcastConnectionState();
 
-    // Signal to the renderer that a fresh agent connection (i.e. app init or
-    // reload) just happened. The renderer's auto-clear behaviour (RED-157)
-    // listens to this event.
-    if (mainWindow && !mainWindow.isDestroyed()) {
+    // Signal to the renderer that an app (re)started, for auto-clear (RED-157).
+    // One app opens a socket per agent, and a second device can join at any
+    // time, so only the first connection counts. Clearing on each one would
+    // wipe what the earlier sockets have already delivered.
+    if (server.clients.size === 1 && mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send("session-started");
     }
 
     ws.on("message", (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString()) as { type?: string; sourceClientId?: string };
+        if (!message || typeof message !== "object" || Array.isArray(message)) return;
+        noteClientActivity(client, message.type);
         // The connection identity is trusted only from the desktop socket,
         // never from agent-provided JSON.
         message.sourceClientId = clientId;
@@ -274,7 +348,12 @@ function attachWebSocketListeners(server: WebSocketServer) {
  */
 function bindWebSocketServer(port: number): Promise<WebSocketServer> {
   return new Promise((resolve, reject) => {
-    const server = new WebSocketServer({ port });
+    const server = new WebSocketServer({
+      port,
+      maxPayload: MAX_MESSAGE_BYTES,
+      verifyClient: ({ origin, req }: { origin?: string; req: IncomingMessage }) =>
+        isAllowedOrigin(origin, req.headers.host),
+    });
     const onListening = () => {
       server.off("error", onError);
       resolve(server);
@@ -305,7 +384,9 @@ async function startInitialWebSocketServer() {
       );
     }
   } catch (err) {
+    serverError = err instanceof Error ? err.message : String(err);
     console.error(`[Inspector] Failed to bind initial WebSocket server on ${WS_PORT}:`, err);
+    broadcastConnectionState();
   }
 }
 
@@ -319,13 +400,14 @@ async function startInitialWebSocketServer() {
 async function setNetworkPort(
   newPort: number
 ): Promise<{ ok: boolean; port: number; error?: string }> {
+  await serverReady;
   if (isRestarting) {
     return { ok: false, port: WS_PORT, error: "A restart is already in progress" };
   }
   if (!Number.isInteger(newPort) || newPort < 1024 || newPort > 65535) {
     return { ok: false, port: WS_PORT, error: "Port must be between 1024 and 65535" };
   }
-  if (newPort === WS_PORT) {
+  if (newPort === WS_PORT && wss) {
     return { ok: true, port: WS_PORT };
   }
 
@@ -340,10 +422,13 @@ async function setNetworkPort(
     const oldServer = wss;
     wss = newServer;
     WS_PORT = newPort;
+    serverError = null;
 
-    // 3. Gracefully close the old server. Existing clients get a close event.
+    // 3. Gracefully close the old server. server.close() alone leaves existing
+    //    sockets open, so agents would never move to the new port.
     if (oldServer) {
       try {
+        for (const client of oldServer.clients) client.close(1012, "Port changed");
         oldServer.close();
       } catch (err) {
         console.error("[Inspector] Error closing old WS server:", err);
@@ -373,17 +458,10 @@ async function setNetworkPort(
  * each one would fire twice.
  */
 function registerIpcHandlers() {
-  ipcMain.on("send-command", (_event, command: CommandMessage) => {
-    if (wss) {
-      wss.clients.forEach((client) => {
-        if (
-          client.readyState === WebSocket.OPEN &&
-          (!command.targetClientId || clientIds.get(client) === command.targetClientId)
-        ) {
-          client.send(JSON.stringify(command));
-        }
-      });
-    }
+  ipcMain.handle("send-command", (_event, command: CommandMessage) => {
+    const targets = resolveCommandTargets(command.targetClientId);
+    for (const client of targets) client.send(JSON.stringify(command));
+    return { delivered: targets.length };
   });
 
   ipcMain.handle("get-connection-info", () => getConnectionInfo());
@@ -467,11 +545,23 @@ function registerIpcHandlers() {
   );
 }
 
-app.whenReady().then(async () => {
+// A second copy could never bind the port, so bring the first one forward.
+const hasInstanceLock = app.requestSingleInstanceLock();
+if (!hasInstanceLock) {
+  app.quit();
+}
+app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
+(hasInstanceLock ? app.whenReady() : new Promise<void>(() => {})).then(async () => {
   // macOS shows the dock icon from the packaged .app bundle in production, but
   // in `npm run dev` it falls back to the Electron framework icon unless we
   // set it explicitly here.
-  if (process.platform === "darwin" && app.dock) {
+  if (process.platform === "darwin" && app.dock && !app.isPackaged) {
     try {
       app.dock.setIcon(path.join(__dirname, "..", "..", "assets", "icon.png"));
     } catch (err) {
@@ -481,7 +571,8 @@ app.whenReady().then(async () => {
 
   createWindow();
   registerIpcHandlers();
-  await startInitialWebSocketServer();
+  serverReady = startInitialWebSocketServer();
+  await serverReady;
   startMdns();
 
   app.on("activate", () => {

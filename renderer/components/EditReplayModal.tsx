@@ -231,9 +231,9 @@ export function EditReplayModal({
 
   const prettifyBody = () => setBody(tryPrettyJson(body));
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const sendsFormData = hasBody && isMultipart;
-    sendReplayCommand(
+    const result = await sendReplayCommand(
       {
         url: resolvedUrl,
         method,
@@ -243,7 +243,9 @@ export function EditReplayModal({
       },
       request.sourceClientId
     );
-    onClose();
+    toast.show(result.message, result.ok ? "success" : "error");
+    // Stay open on failure so the edits aren't lost.
+    if (result.ok) onClose();
   };
 
   /** The current form state shaped as a RequestState — used for saving. */
@@ -270,7 +272,7 @@ export function EditReplayModal({
       body: hasBody && !isMultipart ? body : undefined,
       formParts: hasBody && isMultipart ? formParts : undefined,
     });
-    toast.show("Saved request güncellendi", "success");
+    toast.show("Saved request updated", "success");
     onClose();
   };
 

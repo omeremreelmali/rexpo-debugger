@@ -15,8 +15,10 @@ SemVer: new feature → minor; bug fix → patch.
 - **Node 18+** — the build fails on the default Node 16 (`crypto.getRandomValues`). Use nvm:
   `export PATH="$HOME/.nvm/versions/node/v20.19.4/bin:$PATH"`
 - **Docker** running — needed to build Windows + Linux from macOS (electron-builder `wine` image).
-- macOS signing: the `Developer ID` cert (`BMVRWVA79B`) is **not** on this machine, so builds are
-  **unsigned** and must be **deep ad-hoc signed** (see Gotchas) or they show "damaged" on Apple Silicon.
+- macOS signing: check with `security find-identity -v -p codesigning`. With the `Developer ID Application`
+  cert (`BMVRWVA79B`) installed, a plain `npx electron-builder --mac` signs the builds (not notarized).
+  Without it, builds are **unsigned** and must be **deep ad-hoc signed** (step 2, Gotchas) or they show
+  "damaged" on Apple Silicon.
 
 ---
 
@@ -118,7 +120,8 @@ Pipeline: `capture-screenshots.mjs` (main repo, CDP) → PNGs in `assets/screens
 # 1. Run the dev app WITH CDP + WS:
 export PATH="$HOME/.nvm/versions/node/v20.19.4/bin:$PATH"
 npm run dev:vite &                                   # vite on 5173
-node_modules/.bin/electron . --remote-debugging-port=9222 &   # CDP 9222 + WS 5051
+node_modules/.bin/electron . --user-data-dir="$(mktemp -d)" --remote-debugging-port=9222 &   # CDP 9222 + WS 5051
+# The throwaway profile matters: capture overwrites saved collections and settings in localStorage.
 # 2. Capture (seeds network/console/collections + State via dummy-payloads.mjs sendStateSnapshots):
 node scripts/capture-screenshots.mjs                 # → assets/screenshots/{dark,light}-{scene}.png
 # 3. Copy changed scene PNGs into the website, then optimize:

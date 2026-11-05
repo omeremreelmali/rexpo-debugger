@@ -120,6 +120,9 @@ export interface ConnectionInfo {
   interfaces: NetworkInterfaceInfo[];
   port: number;
   connectedClients: number;
+  /** False when the WebSocket server could not bind its port. */
+  listening: boolean;
+  serverError: string | null;
 }
 
 export interface FileTransferMessage {

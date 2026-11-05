@@ -3,8 +3,9 @@ import { NetworkProvider, useNetwork } from "./state/NetworkContext";
 import { SettingsProvider, useSettings } from "./state/SettingsContext";
 import { CollectionsProvider } from "./state/CollectionsContext";
 import { StateProvider } from "./state/StateContext";
-import { ToastProvider } from "./components/Toast";
+import { ToastProvider, useToast } from "./components/Toast";
 import { BootSequence } from "./components/BootSequence";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FilterBar } from "./components/FilterBar";
 import { StatusLine } from "./components/StatusLine";
 import { TopBar } from "./components/TopBar";
@@ -23,6 +24,17 @@ const MIN_RIGHT_PANEL_WIDTH = 300;
 function AppContent() {
   const { state, dispatch } = useNetwork();
   const { settings } = useSettings();
+  const toast = useToast();
+
+  // The server starts on the default port, so move it to the saved one.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    window.electron?.setNetworkPort?.(settings.connection.port).then((result) => {
+      if (!result.ok) {
+        toast.show(`Port ${settings.connection.port} unavailable: ${result.error}`, "error", 6000);
+      }
+    });
+  }, []);
 
   // Sync persisted history limits from settings to the network state.
   useEffect(() => {
@@ -213,7 +225,9 @@ export function App() {
         <CollectionsProvider>
           <StateProvider>
             <NetworkProvider>
-              <AppContent />
+              <ErrorBoundary>
+                <AppContent />
+              </ErrorBoundary>
             </NetworkProvider>
           </StateProvider>
         </CollectionsProvider>

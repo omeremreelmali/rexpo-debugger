@@ -59,14 +59,18 @@ export function StateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!window.electron?.onStateMessage) return;
     window.electron.onStateMessage(
-      (msg: {
-        storeId: string;
-        name: string;
-        lib: StoreEntry["lib"];
-        state: any;
-        canSet: boolean;
-        at: string;
-      }) => {
+      (raw: any) => {
+        if (!raw || typeof raw.storeId !== "string") return;
+        const msg = {
+          storeId: raw.storeId,
+          name: String(raw.name ?? raw.storeId),
+          lib: (raw.lib === "redux" || raw.lib === "zustand"
+            ? raw.lib
+            : "custom") as StoreEntry["lib"],
+          state: raw.state,
+          canSet: Boolean(raw.canSet),
+          at: typeof raw.at === "string" ? raw.at : new Date().toISOString(),
+        };
         setStoresMap((prev) => {
           const next = new Map(prev);
           const existing = next.get(msg.storeId);
