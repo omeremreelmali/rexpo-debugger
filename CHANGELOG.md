@@ -2,9 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.9.2] - 2026-11-26
 
-Planned as desktop 1.9.2 with agent `rexpo-debugger` 1.5.2.
+Desktop 1.9.2 with agent `rexpo-debugger` 1.5.2.
+
+### 🎨 Changed — desktop
+
+- New app icon in the terminal style of the 1.9 redesign. It uses the near-black
+  panel, the green accent with glow, a HUD grid and corner brackets, and the
+  square-cut "R" from the top bar. It also follows Apple's icon grid, so it is no
+  longer oversized in the Dock.
 
 ### 🐞 Fixed — desktop
 

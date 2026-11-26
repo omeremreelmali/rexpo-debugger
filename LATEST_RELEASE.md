@@ -48,6 +48,7 @@
 
 `main` dalında commit edildi (`cb2ad35`), **henüz push edilmedi ve yayınlanmadı**. Ayrıntılar CHANGELOG.md'nin `[Unreleased]` bölümünde.
 
+- Yeni uygulama ikonu: terminal tasarımına uygun siyah zemin, yeşil parıltılı "R", HUD ızgarası ve köşe çizgileri. macOS ikon ızgarasına uyuyor. (Commit edilmedi.)
 - Bozuk istek adresiyle gelen bir bağlantı artık masaüstü uygulamasını dondurmuyor.
 - Okunamayan veya hasarlı kayıtlı koleksiyonlar silinmiyor; yedekleniyor ve kullanıcıya bildiriliyor. Kayıt başarısız olursa uyarı çıkıyor.
 - Edit & Replay, düzenlenmemiş bir isteği aynen gönderiyor; `myapp://` URL'leri, sorgu değerleri ve büyük sayılar bozulmuyor.

@@ -1,28 +1,61 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Rexpo Debugger app icon, in the desktop app's terminal style (renderer/theme.css):
+    near-black panel, accent #3df59b with a soft glow, a faint HUD grid and corner
+    brackets. The "R" is the same monogram as BrandMark in renderer/components/Icons.tsx
+    (square caps, mitred joins). Sits on Apple's 824px icon grid with 100px margins.
+    Regenerate every raster with `npm run icons`.
+  -->
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#1A2547" />
-      <stop offset="1" stop-color="#0B1228" />
+    <linearGradient id="panel" x1="0" y1="100" x2="0" y2="924" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#101617" />
+      <stop offset="1" stop-color="#050708" />
     </linearGradient>
-    <linearGradient id="stroke" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#8FB3FF" />
-      <stop offset="1" stop-color="#5C84F2" />
-    </linearGradient>
-    <radialGradient id="glow" cx="512" cy="280" r="520" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#638EFF" stop-opacity="0.35" />
-      <stop offset="0.6" stop-color="#638EFF" stop-opacity="0.08" />
-      <stop offset="1" stop-color="#638EFF" stop-opacity="0" />
+    <radialGradient id="halo" cx="512" cy="470" r="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3df59b" stop-opacity="0.16" />
+      <stop offset="1" stop-color="#3df59b" stop-opacity="0" />
     </radialGradient>
+    <pattern id="grid" x="100" y="100" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0 V64 M0 64 H64" fill="none" stroke="#3df59b" stroke-opacity="0.07" stroke-width="2" />
+    </pattern>
+    <linearGradient id="scan" x1="0" y1="0" x2="0" y2="4" gradientUnits="userSpaceOnUse" spreadMethod="repeat">
+      <stop offset="0" stop-color="#000" stop-opacity="0" />
+      <stop offset="0.5" stop-color="#000" stop-opacity="0" />
+      <stop offset="0.5" stop-color="#000" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#000" stop-opacity="0.18" />
+    </linearGradient>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="185" />
+    </clipPath>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="22" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
   </defs>
 
-  <rect x="0" y="0" width="1024" height="1024" rx="224" ry="224" fill="url(#bg)" />
-  <rect x="0" y="0" width="1024" height="1024" rx="224" ry="224" fill="url(#glow)" />
-  <rect x="14" y="14" width="996" height="996" rx="212" ry="212" fill="none" stroke="#638EFF" stroke-opacity="0.18" stroke-width="2" />
+  <!-- Panel -->
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#panel)" />
+    <rect x="100" y="100" width="824" height="824" fill="url(#grid)" />
+    <rect x="100" y="100" width="824" height="824" fill="url(#halo)" />
+    <rect x="100" y="100" width="824" height="824" fill="url(#scan)" />
+  </g>
+  <rect x="103" y="103" width="818" height="818" rx="182" fill="none" stroke="#3df59b" stroke-opacity="0.22" stroke-width="6" />
 
-  <g fill="none" stroke="url(#stroke)" stroke-width="86" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M310 332 H588 a126 126 0 0 1 0 252 H460 l180 180" />
+  <!-- HUD corner brackets -->
+  <g fill="none" stroke="#3df59b" stroke-opacity="0.55" stroke-width="12" stroke-linecap="square">
+    <path d="M226 290 V226 H290" />
+    <path d="M734 226 H798 V290" />
+    <path d="M798 734 V798 H734" />
+    <path d="M290 798 H226 V734" />
   </g>
 
-  <circle cx="744" cy="332" r="64" fill="url(#stroke)" />
-  <circle cx="744" cy="332" r="64" fill="#FFFFFF" fill-opacity="0.06" />
+  <!-- R monogram (BrandMark), centred and scaled onto the grid -->
+  <g filter="url(#glow)" transform="translate(512 512) scale(0.86) translate(-537 -537)">
+    <path d="M310 332 H588 a126 126 0 0 1 0 252 H460 l180 180" fill="none" stroke="#3df59b" stroke-width="86" stroke-linecap="square" stroke-linejoin="miter" />
+    <circle cx="744" cy="332" r="64" fill="#3df59b" />
+  </g>
 </svg>
