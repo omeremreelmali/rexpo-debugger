@@ -29,6 +29,7 @@ export type ConsoleMessage = {
 };
 
 import { discoverDebugger, resetDiscoveryCache, withAgentKind } from "./discovery";
+import { createAgentLogger } from "./log";
 
 export type ConsoleAgentOptions = {
   /**
@@ -60,6 +61,8 @@ let reconnectStrategy: ReconnectStrategy | null = null;
 let reconnectAttempt = 0;
 let reconnectTimer: any = null;
 let stopped = false;
+/** Bumped on init and stop, so a discovery started earlier can tell it is stale. */
+let generation = 0;
 
 const RECONNECT_BASE_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 10_000;
@@ -87,7 +90,7 @@ function scheduleReconnect() {
     reconnectTimer = null;
     if (stopped || !reconnectStrategy) return;
     establishConnection(reconnectStrategy).catch((err) => {
-      errorLog("❌ Reconnect attempt failed:", err?.message || err);
+      log.unreachable("❌ Reconnect attempt failed:", err?.message || err);
     });
   }, delay);
 }
@@ -100,15 +103,18 @@ async function establishConnection(strategy: ReconnectStrategy): Promise<void> {
 
   debugLog("🔎 Re-discovering debugger via mDNS");
   resetDiscoveryCache();
+  const run = generation;
   try {
     const service = await discoverDebugger({
       timeoutMs: strategy.discoveryTimeoutMs,
       debug: debugMode,
     });
+    if (run !== generation) return; // stopped or re-initialised meanwhile
     debugLog(`🎯 Discovered debugger: ${service.name} @ ${service.url}`);
     connectSocket(service.url);
   } catch (err) {
-    errorLog("❌ Auto-discovery failed:", (err as Error)?.message || err);
+    if (run !== generation) return;
+    log.unreachable("❌ Auto-discovery failed:", (err as Error)?.message || err);
     scheduleReconnect();
   }
 }
@@ -122,31 +128,39 @@ const originalConsole = {
   debug: console.debug,
 };
 
-/**
- * Debug log helper - only logs in debug mode
- */
-function debugLog(...args: any[]) {
-  if (debugMode) {
-    originalConsole.log("[ConsoleAgent]", ...args);
-  }
-}
-
-/**
- * Error log helper - always logs (critical errors)
- */
-function errorLog(...args: any[]) {
-  originalConsole.error("[ConsoleAgent]", ...args);
-}
+// Bypasses the patched console, and never uses console.error (see ./log).
+const log = createAgentLogger("[ConsoleAgent]");
+const debugLog = log.debug;
+const errorLog = log.error;
 
 /**
  * Initializes the console agent and overrides console methods
  */
+/** Drops the current socket without letting its handlers run again. */
+function closeSocket() {
+  const old = socket;
+  if (!old) return;
+  socket = null;
+  try {
+    old.close();
+  } catch {
+    // already closed
+  }
+}
+
 function connectSocket(wsUrl: string) {
   try {
     debugLog("🔄 Connecting to inspector:", wsUrl);
-    socket = new WebSocket(withAgentKind(wsUrl, "console"));
+    closeSocket();
+    // Handlers check `socket !== ws`: a replaced socket closing late (after a
+    // restoreConsole + init, say) must not null out or reconnect over the one
+    // that superseded it.
+    const ws = new WebSocket(withAgentKind(wsUrl, "console"));
+    socket = ws;
 
-    socket.onopen = () => {
+    ws.onopen = () => {
+      if (socket !== ws) return;
+      log.connected();
       debugLog("✅ Connected to inspector:", wsUrl);
       // Successful connect — reset backoff for the next disconnect.
       reconnectAttempt = 0;
@@ -155,11 +169,13 @@ function connectSocket(wsUrl: string) {
       flushSendQueue();
     };
 
-    socket.onerror = (e) => {
-      errorLog("❌ WebSocket error:", e);
+    ws.onerror = (e) => {
+      if (socket !== ws) return;
+      log.unreachable("❌ WebSocket error:", e);
     };
 
-    socket.onclose = (_e) => {
+    ws.onclose = (_e) => {
+      if (socket !== ws) return;
       debugLog("🔌 Disconnected from inspector");
       socket = null;
       // Auto-reconnect — same strategy as initial connect.
@@ -190,6 +206,7 @@ export function initConsoleAgent(options: ConsoleAgentOptions = {}) {
     discoveryTimeoutMs,
   } = options;
   debugMode = debug;
+  log.setDebug(debug);
   captureStackTrace = capture;
 
   if (!enabled) {
@@ -199,6 +216,8 @@ export function initConsoleAgent(options: ConsoleAgentOptions = {}) {
 
   initialized = true;
   stopped = false;
+  generation += 1;
+  const run = generation;
 
   // Remember how we connected so the reconnect timer can repeat the same path.
   reconnectStrategy = wsUrl
@@ -215,11 +234,13 @@ export function initConsoleAgent(options: ConsoleAgentOptions = {}) {
     debugLog("🔎 No wsUrl provided — auto-discovering debugger via mDNS");
     discoverDebugger({ timeoutMs: discoveryTimeoutMs, debug: debugMode })
       .then((service) => {
+        if (run !== generation) return; // stopped or re-initialised meanwhile
         debugLog(`🎯 Discovered debugger: ${service.name} @ ${service.url}`);
         connectSocket(service.url);
       })
       .catch((err) => {
-        errorLog("❌ Initial auto-discovery failed:", err?.message || err);
+        if (run !== generation) return;
+        log.unreachable("❌ Initial auto-discovery failed:", err?.message || err);
         scheduleReconnect();
       });
   }
@@ -436,10 +457,13 @@ export function restoreConsole() {
   console.info = originalConsole.info;
   console.debug = originalConsole.debug;
 
-  if (socket) {
-    socket.close();
-    socket = null;
-  }
+  // Stop reconnecting too, or the agent would dial the desktop again and keep
+  // a socket open after monitoring was turned off.
+  stopped = true;
+  generation += 1;
+  reconnectStrategy = null;
+  clearReconnectTimer();
+  closeSocket();
 
   initialized = false;
   debugLog("Console monitoring stopped");

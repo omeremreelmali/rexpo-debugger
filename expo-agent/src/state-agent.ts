@@ -19,6 +19,7 @@
  */
 
 import { discoverDebugger, resetDiscoveryCache, withAgentKind } from "./discovery";
+import { createAgentLogger } from "./log";
 
 export type StateMessage = {
   type: "state";
@@ -89,16 +90,16 @@ let reconnectStrategy: ReconnectStrategy | null = null;
 let reconnectAttempt = 0;
 let reconnectTimer: any = null;
 let stopped = false;
+/** Bumped on init and stop, so a discovery started earlier can tell it is stale. */
+let generation = 0;
 
 const RECONNECT_BASE_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 10_000;
 
-function debugLog(...args: any[]) {
-  if (debugMode) console.log("[StateAgent]", ...args);
-}
-function errorLog(...args: any[]) {
-  console.error("[StateAgent]", ...args);
-}
+// Bypasses the patched console, and never uses console.error (see ./log).
+const log = createAgentLogger("[StateAgent]");
+const debugLog = log.debug;
+const errorLog = log.error;
 
 function computeReconnectDelay(attempt: number): number {
   return Math.min(RECONNECT_BASE_DELAY_MS * 2 ** attempt, RECONNECT_MAX_DELAY_MS);
@@ -119,7 +120,7 @@ function scheduleReconnect() {
     reconnectTimer = null;
     if (stopped || !reconnectStrategy) return;
     establishConnection(reconnectStrategy).catch((err) => {
-      errorLog("❌ Reconnect attempt failed:", err?.message || err);
+      log.unreachable("❌ Reconnect attempt failed:", err?.message || err);
     });
   }, delay);
 }
@@ -131,32 +132,56 @@ async function establishConnection(strategy: ReconnectStrategy): Promise<void> {
   }
   debugLog("🔎 Re-discovering debugger via mDNS");
   resetDiscoveryCache();
+  const run = generation;
   try {
     const service = await discoverDebugger({
       timeoutMs: strategy.discoveryTimeoutMs,
       debug: debugMode,
     });
+    if (run !== generation) return; // stopped or re-initialised meanwhile
     debugLog(`🎯 Discovered debugger: ${service.name} @ ${service.url}`);
     connectSocket(service.url);
   } catch (err) {
-    errorLog("❌ Auto-discovery failed:", (err as Error)?.message || err);
+    if (run !== generation) return;
+    log.unreachable("❌ Auto-discovery failed:", (err as Error)?.message || err);
     scheduleReconnect();
+  }
+}
+
+/** Drops the current socket without letting its handlers run again. */
+function closeSocket() {
+  const old = socket;
+  if (!old) return;
+  socket = null;
+  try {
+    old.close();
+  } catch {
+    // already closed
   }
 }
 
 function connectSocket(wsUrl: string) {
   try {
     debugLog("🔄 Connecting to inspector:", wsUrl);
-    socket = new WebSocket(withAgentKind(wsUrl, "state"));
-    socket.onopen = () => {
+    closeSocket();
+    // Handlers check `socket !== ws`: a replaced socket closing late (after a
+    // stop + init, say) must not null out or reconnect over the newer one.
+    const ws = new WebSocket(withAgentKind(wsUrl, "state"));
+    socket = ws;
+    ws.onopen = () => {
+      if (socket !== ws) return;
+      log.connected();
       debugLog("✅ Connected to inspector:", wsUrl);
       reconnectAttempt = 0;
       clearReconnectTimer();
       // Re-announce every store so the freshly-connected desktop sees them.
       for (const store of stores.values()) sendSnapshot(store);
     };
-    socket.onerror = (e) => errorLog("❌ WebSocket error:", e);
-    socket.onclose = () => {
+    ws.onerror = (e) => {
+      if (socket === ws) log.unreachable("❌ WebSocket error:", e);
+    };
+    ws.onclose = () => {
+      if (socket !== ws) return;
       debugLog("🔌 Disconnected from inspector");
       socket = null;
       scheduleReconnect();
@@ -326,6 +351,7 @@ export function initStateAgent(options: StateAgentOptions = {}): void {
     throttleMs: throttle = 150,
   } = options;
   debugMode = debug;
+  log.setDebug(debug);
   throttleMs = throttle;
 
   if (!enabled) {
@@ -335,6 +361,8 @@ export function initStateAgent(options: StateAgentOptions = {}): void {
 
   initialized = true;
   stopped = false;
+  generation += 1;
+  const run = generation;
   reconnectStrategy = wsUrl
     ? { mode: "manual", wsUrl }
     : { mode: "auto", discoveryTimeoutMs };
@@ -346,11 +374,13 @@ export function initStateAgent(options: StateAgentOptions = {}): void {
     debugLog("🔎 No wsUrl — auto-discovering debugger via mDNS");
     discoverDebugger({ timeoutMs: discoveryTimeoutMs, debug: debugMode })
       .then((service) => {
+        if (run !== generation) return; // stopped or re-initialised meanwhile
         debugLog(`🎯 Discovered debugger: ${service.name} @ ${service.url}`);
         connectSocket(service.url);
       })
       .catch((err) => {
-        errorLog("❌ Initial auto-discovery failed:", err?.message || err);
+        if (run !== generation) return;
+        log.unreachable("❌ Initial auto-discovery failed:", err?.message || err);
         scheduleReconnect();
       });
   }
@@ -468,16 +498,15 @@ export function attachZustandStore(
 /** Detach all stores and close the socket. */
 export function stopStateAgent(): void {
   stopped = true;
+  generation += 1;
+  reconnectStrategy = null;
   clearReconnectTimer();
   if (flushTimer !== null) {
     clearTimeout(flushTimer);
     flushTimer = null;
   }
   for (const id of Array.from(stores.keys())) detachStore(id);
-  if (socket) {
-    socket.close();
-    socket = null;
-  }
+  closeSocket();
   initialized = false;
   debugLog("State monitoring stopped");
 }

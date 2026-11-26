@@ -5,8 +5,10 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import { useToast } from "../components/Toast";
 import { FormDataPart } from "../types";
 
 const STORAGE_KEY = "rexpo-debugger-collections";
@@ -75,31 +77,129 @@ interface CollectionsContextValue {
 
 const CollectionsContext = createContext<CollectionsContextValue | null>(null);
 
-function loadState(): CollectionsState {
+/** Why the stored collections could not be loaded as they were. */
+type LoadProblem =
+  | { kind: "unreadable"; backupKey: string | null }
+  | { kind: "repaired"; dropped: number; backupKey: string | null };
+
+interface LoadResult {
+  state: CollectionsState;
+  problem?: LoadProblem;
+}
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+const optionalString = (v: unknown): string | undefined =>
+  typeof v === "string" ? v : undefined;
+
+/**
+ * Copies the stored payload aside before anything replaces it, so a payload we
+ * could not read in full can still be recovered by hand. Returns the key it
+ * went to, or null when even that failed (storage full).
+ */
+function backupRaw(raw: string): string | null {
+  const key = `${STORAGE_KEY}.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return initialState;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.savedRequests)) return initialState;
-    return {
-      savedRequests: parsed.savedRequests as SavedRequest[],
-      // Older payloads (pre first-class collections) have no `collections`
-      // field — default to an empty list; existing buckets are still derived
-      // from the saved requests themselves.
-      collections: Array.isArray(parsed.collections)
-        ? (parsed.collections as string[])
-        : [],
-    };
+    localStorage.setItem(key, raw);
+    return key;
   } catch {
-    return initialState;
+    return null;
   }
 }
 
-function persist(state: CollectionsState) {
+/**
+ * Rebuilds one stored entry with the types the UI relies on. Entries written by
+ * this app always pass; a hand-edited or damaged one would otherwise crash
+ * rendering on every launch. Returns null when there is nothing to replay.
+ */
+function sanitizeEntry(value: unknown): SavedRequest | null {
+  if (!isPlainObject(value)) return null;
+  const { method, url } = value;
+  if (typeof method !== "string" || !method.trim() || typeof url !== "string") return null;
+
+  const headers = isPlainObject(value.headers)
+    ? Object.fromEntries(
+        Object.entries(value.headers)
+          .filter(([, v]) => v !== undefined && v !== null)
+          .map(([k, v]) => [k, String(v)])
+      )
+    : undefined;
+  const tags = Array.isArray(value.tags)
+    ? value.tags.filter((t): t is string => typeof t === "string")
+    : undefined;
+  const formParts = Array.isArray(value.formParts)
+    ? (value.formParts.filter(
+        (p) => isPlainObject(p) && typeof p.name === "string" && (p.kind === "file" || p.kind === "text")
+      ) as unknown as FormDataPart[])
+    : undefined;
+
+  return {
+    id: typeof value.id === "string" && value.id ? value.id : newId(),
+    name: optionalString(value.name),
+    collectionName: optionalString(value.collectionName),
+    tags,
+    description: optionalString(value.description),
+    method,
+    url,
+    headers,
+    body: optionalString(value.body),
+    formParts,
+    createdAt: optionalString(value.createdAt) ?? new Date().toISOString(),
+    updatedAt: optionalString(value.updatedAt),
+  };
+}
+
+function loadState(): LoadResult {
+  let raw: string | null;
+  try {
+    raw = localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return { state: initialState };
+  }
+  if (!raw) return { state: initialState };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = undefined;
+  }
+  if (!isPlainObject(parsed) || !Array.isArray(parsed.savedRequests)) {
+    return { state: initialState, problem: { kind: "unreadable", backupKey: backupRaw(raw) } };
+  }
+
+  const seen = new Set<string>();
+  const savedRequests: SavedRequest[] = [];
+  for (const entry of parsed.savedRequests) {
+    const clean = sanitizeEntry(entry);
+    if (!clean) continue;
+    // Duplicate ids would make edits and deletes hit the wrong entry.
+    if (seen.has(clean.id)) clean.id = newId();
+    seen.add(clean.id);
+    savedRequests.push(clean);
+  }
+  // Older payloads (pre first-class collections) have no `collections` field;
+  // existing buckets are still derived from the saved requests themselves.
+  const collections = Array.isArray(parsed.collections)
+    ? parsed.collections.filter((c): c is string => typeof c === "string")
+    : [];
+
+  const dropped = parsed.savedRequests.length - savedRequests.length;
+  const state = { savedRequests, collections };
+  if (dropped > 0) {
+    return { state, problem: { kind: "repaired", dropped, backupKey: backupRaw(raw) } };
+  }
+  return { state };
+}
+
+function persist(state: CollectionsState): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
   } catch (err) {
     console.warn("[Collections] Failed to persist:", err);
+    return false;
   }
 }
 
@@ -148,11 +248,44 @@ function deriveCollectionNames(
 }
 
 export function CollectionsProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<CollectionsState>(() => loadState());
+  // `show` is stable; the context object itself changes with every toast.
+  const { show: showToast } = useToast();
+  const [loaded] = useState<LoadResult>(() => loadState());
+  const [state, setState] = useState<CollectionsState>(loaded.state);
+  // The loaded state is what storage already holds, so it is not written back.
+  // That way a payload we could not read stays where it is until the user
+  // actually changes something (and by then it has been backed up).
+  const persistFailed = useRef(false);
+  const problemReported = useRef(false);
 
   useEffect(() => {
-    persist(state);
-  }, [state]);
+    const problem = loaded.problem;
+    if (!problem || problemReported.current) return;
+    problemReported.current = true;
+    const where = problem.backupKey
+      ? ` A copy was kept in local storage as "${problem.backupKey}".`
+      : " It could not be backed up, so it is left untouched until you change a collection.";
+    const message =
+      problem.kind === "unreadable"
+        ? `Saved collections could not be read.${where}`
+        : `${problem.dropped} damaged saved request${problem.dropped === 1 ? " was" : "s were"} skipped.${where}`;
+    console.warn("[Collections]", message);
+    showToast(message, "error", 9000);
+  }, [loaded, showToast]);
+
+  useEffect(() => {
+    if (state === loaded.state) return;
+    const ok = persist(state);
+    // Say so once per run of failures; a toast per keystroke would be noise.
+    if (!ok && !persistFailed.current) {
+      showToast(
+        "Could not save collections: local storage is full or unavailable. Recent changes will be lost when the app closes.",
+        "error",
+        9000
+      );
+    }
+    persistFailed.current = !ok;
+  }, [state, loaded, showToast]);
 
   const saveRequest = useCallback<CollectionsContextValue["saveRequest"]>(
     (req) => {

@@ -60,15 +60,8 @@ export function generateCurlCommand(request: RequestState): string {
       }
     });
   } else if (request.requestBodySnippet) {
-    // Pretty format if JSON body
-    try {
-      const parsed = JSON.parse(request.requestBodySnippet);
-      const jsonString = JSON.stringify(parsed);
-      parts.push(`-d '${shellQuote(jsonString)}'`);
-    } catch {
-      // Add directly if not JSON
-      parts.push(`-d '${shellQuote(request.requestBodySnippet)}'`);
-    }
+    // The body as captured: a JSON round trip would round large numbers.
+    parts.push(`-d '${shellQuote(request.requestBodySnippet)}'`);
   }
 
   // URL (at the end)

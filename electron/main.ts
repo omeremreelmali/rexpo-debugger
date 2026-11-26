@@ -215,8 +215,17 @@ function createWindow() {
   });
 }
 
+/**
+ * The request line comes straight off the network, so a malformed one must not
+ * throw: inside the connection handler that used to stop the whole app.
+ */
 function agentKindFromUrl(url?: string): AgentKind | undefined {
-  const kind = new URL(url ?? "/", "ws://agent").searchParams.get("agent");
+  let kind: string | null = null;
+  try {
+    kind = new URL(url ?? "/", "ws://agent").searchParams.get("agent");
+  } catch {
+    return undefined;
+  }
   return kind === "network" || kind === "console" || kind === "state" ? kind : undefined;
 }
 
@@ -544,6 +553,16 @@ function registerIpcHandlers() {
     }
   );
 }
+
+// Without a listener Electron shows a modal dialog for an uncaught exception,
+// which blocks the main process: the inspector stops accepting connections and
+// no longer quits on SIGTERM. Logging keeps one bad event from freezing it.
+process.on("uncaughtException", (err) => {
+  console.error("[Inspector] Uncaught exception:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[Inspector] Unhandled rejection:", reason);
+});
 
 // A second copy could never bind the port, so bring the first one forward.
 const hasInstanceLock = app.requestSingleInstanceLock();

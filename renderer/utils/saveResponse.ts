@@ -1,4 +1,5 @@
 import { RequestState } from "../types";
+import { formatJsonLossless } from "./formatJson";
 
 interface SaveResult {
   ok: boolean;
@@ -84,13 +85,10 @@ export async function saveResponseToFile(request: RequestState): Promise<SaveRes
   const { defaultName, ext } = deriveFilename(request);
 
   // Pretty-print JSON for readability when saving
+  // (re-indented only, so large numbers keep every digit; invalid JSON is saved as-is)
   let content = request.responseBodySnippet;
   if (ext === "json") {
-    try {
-      content = JSON.stringify(JSON.parse(content), null, 2);
-    } catch {
-      // body is labeled json but isn't valid — save as-is
-    }
+    content = formatJsonLossless(content);
   }
 
   const result = await window.electron.saveResponseToFile({

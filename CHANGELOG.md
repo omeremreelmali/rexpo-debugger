@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+Planned as desktop 1.9.2 with agent `rexpo-debugger` 1.5.2.
+
+### 🐞 Fixed — desktop
+
+- A connection with a malformed request URL no longer freezes the app. Before,
+  it stopped new connections and kept the app from quitting.
+- Saved collections that can't be read are kept and backed up instead of being
+  replaced with an empty list. Damaged entries are skipped instead of crashing
+  every launch, and the app says when either happens or when saving fails
+  because storage is full.
+- Edit & Replay sends an untouched request exactly as captured. Custom-scheme
+  URLs (`myapp://…`) and query values such as `ids=1,2,3` stay as they are, and
+  the body is no longer reformatted on open. Pretty-print, cURL export and
+  "Save response" keep large numbers (`9007199254740993`) and trailing zeros
+  (`10.50`).
+
+### 🐞 Fixed — agent
+
+- With the desktop closed, each agent prints one line per outage instead of an
+  error on every retry. It no longer calls `console.error`, so no red LogBox
+  toasts appear. The agents' own messages are no longer captured as app logs.
+- Calling `initConsoleAgent` again after `restoreConsole`, or `initStateAgent`
+  after `stopStateAgent`, keeps one working socket. Before, a late close of the
+  old socket could silence the agent. `restoreConsole` now also stops
+  reconnecting.
+
 ## [1.9.1] - 2026-11-05
 
 Desktop 1.9.1 with agent `rexpo-debugger` 1.5.1.

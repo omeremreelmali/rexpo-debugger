@@ -85,6 +85,7 @@ export type InitOptions = {
 };
 
 import { discoverDebugger, resetDiscoveryCache, withAgentKind } from "./discovery";
+import { createAgentLogger } from "./log";
 
 let initialized = false;
 let socket: WebSocket | null = null;
@@ -138,14 +139,14 @@ function scheduleReconnect() {
   reconnectAttempt += 1;
 
   debugLog(
-    `[NetworkAgent] 🔁 Will retry connection in ${delay}ms (attempt #${reconnectAttempt})`
+    `🔁 Will retry connection in ${delay}ms (attempt #${reconnectAttempt})`
   );
 
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
     if (stopped || !reconnectStrategy) return;
     establishConnection(reconnectStrategy).catch((err) => {
-      errorLog("[NetworkAgent] ❌ Reconnect attempt failed:", err?.message || err);
+      log.unreachable("❌ Reconnect attempt failed:", err?.message || err);
       // The connection failure will itself trigger another scheduleReconnect
       // via onclose / discovery rejection — no need to chain here.
     });
@@ -167,7 +168,7 @@ async function establishConnection(strategy: ReconnectStrategy): Promise<void> {
     return;
   }
 
-  debugLog("[NetworkAgent] 🔎 Re-discovering debugger via mDNS");
+  debugLog("🔎 Re-discovering debugger via mDNS");
   resetDiscoveryCache();
   try {
     const service = await discoverDebugger({
@@ -175,12 +176,12 @@ async function establishConnection(strategy: ReconnectStrategy): Promise<void> {
       debug: debugMode,
     });
     debugLog(
-      `[NetworkAgent] 🎯 Discovered debugger: ${service.name} @ ${service.url}`
+      `🎯 Discovered debugger: ${service.name} @ ${service.url}`
     );
     connectSocket(service.url);
   } catch (err) {
-    errorLog(
-      "[NetworkAgent] ❌ Auto-discovery failed:",
+    log.unreachable(
+      "❌ Auto-discovery failed:",
       (err as Error)?.message || err
     );
     // Trigger another retry cycle so the agent doesn't give up after one
@@ -195,20 +196,22 @@ const requestMetadataMap = new WeakMap<
   { id: string; startedAt: string; startTime: number }
 >();
 
-/**
- * Log helper - only logs in debug mode
- */
-function debugLog(...args: any[]) {
-  if (debugMode) {
-    console.log(...args);
-  }
-}
+// Writes to the console as it was before the console agent patched it, so the
+// agent's own messages are never captured as app logs (see ./log).
+const log = createAgentLogger("[NetworkAgent]");
+const debugLog = log.debug;
+const errorLog = log.error;
 
-/**
- * Error log helper - always logs (critical errors)
- */
-function errorLog(...args: any[]) {
-  console.log(...args);
+/** Drops the current socket without letting its handlers run again. */
+function closeSocket() {
+  const old = socket;
+  if (!old) return;
+  socket = null;
+  try {
+    old.close();
+  } catch {
+    // already closed
+  }
 }
 
 /**
@@ -217,12 +220,18 @@ function errorLog(...args: any[]) {
  */
 function connectSocket(wsUrl: string) {
   try {
-    debugLog("[NetworkAgent] 🔄 Connecting to inspector:", wsUrl);
-    socket = new WebSocket(withAgentKind(wsUrl, "network"));
+    debugLog("🔄 Connecting to inspector:", wsUrl);
+    closeSocket();
+    // Handlers check `socket !== ws`: a replaced socket closing late must not
+    // null out or reconnect over the one that superseded it.
+    const ws = new WebSocket(withAgentKind(wsUrl, "network"));
+    socket = ws;
 
-    socket.onopen = () => {
-      debugLog("[NetworkAgent] ✅ Connected to inspector:", wsUrl);
-      debugLog("[NetworkAgent] 🟢 Socket state: OPEN (readyState: 1)");
+    ws.onopen = () => {
+      if (socket !== ws) return;
+      log.connected();
+      debugLog("✅ Connected to inspector:", wsUrl);
+      debugLog("🟢 Socket state: OPEN (readyState: 1)");
 
       // Successful connect — reset the backoff so the next disconnect starts
       // its retry cycle from 1s again instead of resuming a long delay.
@@ -241,25 +250,27 @@ function connectSocket(wsUrl: string) {
             const states = ["CONNECTING", "OPEN", "CLOSING", "CLOSED"];
             const stateStr = states[socket.readyState] || "UNKNOWN";
             debugLog(
-              `[NetworkAgent] 💚 Health check - Socket: ${stateStr} (${socket.readyState})`
+              `💚 Health check - Socket: ${stateStr} (${socket.readyState})`
             );
           }
         }, 10000);
       }
     };
 
-    socket.onerror = (e) => {
-      errorLog("[NetworkAgent] ❌ WebSocket error:", e);
-      debugLog("[NetworkAgent] 🔍 Current socket state:", socket?.readyState);
+    ws.onerror = (e) => {
+      if (socket !== ws) return;
+      log.unreachable("❌ WebSocket error:", e);
+      debugLog("🔍 Current socket state:", socket?.readyState);
     };
 
-    socket.onmessage = async (event) => {
+    ws.onmessage = async (event) => {
+      if (socket !== ws) return;
       try {
         const dataStr = typeof event.data === "string" ? event.data : event.data.toString();
         const message = JSON.parse(dataStr);
         if (message.type === "command" && message.command === "replay_request") {
           const { url, method, headers, body, formParts } = message.payload;
-          debugLog(`[NetworkAgent] 🔄 Replaying request: ${method} ${url}`);
+          debugLog(`🔄 Replaying request: ${method} ${url}`);
 
           const init: any = { method };
           if (headers) init.headers = headers;
@@ -286,10 +297,10 @@ function connectSocket(wsUrl: string) {
 
           if (interceptedFetch) {
             interceptedFetch(url, init).catch((err) => {
-              errorLog("[NetworkAgent] ❌ Replay request failed:", err);
+              errorLog("❌ Replay request failed:", err);
             });
           } else {
-            errorLog("[NetworkAgent] ❌ Intercepted fetch is not ready yet.");
+            errorLog("❌ Intercepted fetch is not ready yet.");
           }
         } else if (message.type === "command" && message.command === "request_file") {
           await handleFileRequest(message.payload);
@@ -297,13 +308,14 @@ function connectSocket(wsUrl: string) {
           await handleOpenFile(message.payload);
         }
       } catch (e) {
-        errorLog("[NetworkAgent] ❌ Failed to parse incoming message:", e);
+        errorLog("❌ Failed to parse incoming message:", e);
       }
     };
 
-    socket.onclose = (e) => {
-      debugLog("[NetworkAgent] 🔌 Disconnected from inspector");
-      debugLog("[NetworkAgent] 🔍 Close code:", e.code, "reason:", e.reason);
+    ws.onclose = (e) => {
+      if (socket !== ws) return;
+      debugLog("🔌 Disconnected from inspector");
+      debugLog("🔍 Close code:", e.code, "reason:", e.reason);
 
       if (healthCheckInterval) {
         clearInterval(healthCheckInterval);
@@ -319,7 +331,7 @@ function connectSocket(wsUrl: string) {
       scheduleReconnect();
     };
   } catch (error) {
-    errorLog("[NetworkAgent] ❌ Failed to create WebSocket:", error);
+    errorLog("❌ Failed to create WebSocket:", error);
     scheduleReconnect();
   }
 }
@@ -409,16 +421,17 @@ export function initNetworkAgent(options: InitOptions = {}) {
   }
 
   if (initialized) {
-    debugLog("[NetworkAgent] Already initialized");
+    debugLog("Already initialized");
     return;
   }
 
   const { wsUrl, enabled = true, debug = false, discoveryTimeoutMs } = options;
   maxBodyLength = options.maxBodyLength || 3000;
   debugMode = debug;
+  log.setDebug(debug);
 
   if (!enabled) {
-    debugLog("[NetworkAgent] Disabled by config");
+    debugLog("Disabled by config");
     return;
   }
 
@@ -437,20 +450,20 @@ export function initNetworkAgent(options: InitOptions = {}) {
   // SHARED with any other agent (Console + Network) starting at the same time —
   // only one zeroconf scan is needed.
   if (wsUrl) {
-    debugLog("[NetworkAgent] 🔄 Initial connect to:", wsUrl);
+    debugLog("🔄 Initial connect to:", wsUrl);
     connectSocket(wsUrl);
   } else {
-    debugLog("[NetworkAgent] 🔎 No wsUrl provided — auto-discovering debugger via mDNS");
+    debugLog("🔎 No wsUrl provided — auto-discovering debugger via mDNS");
     discoverDebugger({ timeoutMs: discoveryTimeoutMs, debug: debugMode })
       .then((service) => {
         debugLog(
-          `[NetworkAgent] 🎯 Discovered debugger: ${service.name} @ ${service.url}`
+          `🎯 Discovered debugger: ${service.name} @ ${service.url}`
         );
         connectSocket(service.url);
       })
       .catch((err) => {
-        errorLog(
-          "[NetworkAgent] ❌ Initial auto-discovery failed:",
+        log.unreachable(
+          "❌ Initial auto-discovery failed:",
           err?.message || err
         );
         scheduleReconnect();
@@ -489,7 +502,7 @@ export function initNetworkAgent(options: InitOptions = {}) {
 
     // Send request message
     debugLog(
-      `[NetworkAgent] 🚀 Capturing ${method} request:`,
+      `🚀 Capturing ${method} request:`,
       String(url).substring(0, 80)
     );
     safeSend(socket, {
@@ -512,7 +525,7 @@ export function initNetworkAgent(options: InitOptions = {}) {
       const sendResponse = (responseBodySnippet?: string) => {
         const durationMs = Date.now() - startTime;
         debugLog(
-          `[NetworkAgent] 📥 Capturing response: ${response.status} (${durationMs}ms)`
+          `📥 Capturing response: ${response.status} (${durationMs}ms)`
         );
         safeSend(socket, {
           type: "response",
@@ -539,7 +552,7 @@ export function initNetworkAgent(options: InitOptions = {}) {
           .then(() => response.clone().text())
           .then((text) => sendResponse(createTextSnippet(text, maxBodyLength)))
           .catch((readError) => {
-            debugLog("[NetworkAgent] Failed to read response body:", readError);
+            debugLog("Failed to read response body:", readError);
             sendResponse();
           });
       }
@@ -549,7 +562,7 @@ export function initNetworkAgent(options: InitOptions = {}) {
       // Send response message in case of error
       const durationMs = Date.now() - startTime;
 
-      errorLog(`[NetworkAgent] ❌ Request failed:`, err?.message || err);
+      errorLog(`❌ Request failed:`, err?.message || err);
       safeSend(socket, {
         type: "response",
         id,
@@ -575,7 +588,7 @@ export function initNetworkAgent(options: InitOptions = {}) {
   const globalAxios = (global as any).axios;
   if (globalAxios?.interceptors) attachAxiosInterceptors(globalAxios);
 
-  debugLog("[NetworkAgent] 🔍 Network monitoring started");
+  debugLog("🔍 Network monitoring started");
 }
 
 /**
@@ -604,14 +617,14 @@ function flushSendQueue() {
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
   if (sendQueue.length === 0) return;
 
-  debugLog(`[NetworkAgent] 📤 Flushing ${sendQueue.length} queued messages`);
+  debugLog(`📤 Flushing ${sendQueue.length} queued messages`);
   // Move queue out before iterating in case sending re-enters via interceptors.
   const drained = sendQueue.splice(0, sendQueue.length);
   for (const payload of drained) {
     try {
       socket.send(JSON.stringify(payload));
     } catch (e) {
-      errorLog("[NetworkAgent] ❌ Flush error, dropping remainder:", e);
+      errorLog("❌ Flush error, dropping remainder:", e);
       break;
     }
   }
@@ -625,7 +638,7 @@ function safeSend(ws: WebSocket | null, payload: NetworkMessage) {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     enqueueOrDrop(payload);
     debugLog(
-      `[NetworkAgent] 📥 Queued ${payload.type} (socket not ready, queue size: ${sendQueue.length})`
+      `📥 Queued ${payload.type} (socket not ready, queue size: ${sendQueue.length})`
     );
     return;
   }
@@ -634,11 +647,11 @@ function safeSend(ws: WebSocket | null, payload: NetworkMessage) {
     const message = JSON.stringify(payload);
     ws.send(message);
     debugLog(
-      `[NetworkAgent] ✅ Sent ${payload.type} for:`,
+      `✅ Sent ${payload.type} for:`,
       payload.url.substring(0, 60) + "..."
     );
   } catch (e) {
-    errorLog("[NetworkAgent] ❌ Send error:", e);
+    errorLog("❌ Send error:", e);
   }
 }
 
@@ -764,7 +777,7 @@ function readFormDataParts(body: any): FormDataPart[] {
       for (const [entryName, value] of body.entries()) push(entryName, value);
     }
   } catch (err) {
-    debugLog("[NetworkAgent] Failed to read FormData parts:", err);
+    debugLog("Failed to read FormData parts:", err);
   }
 
   return parts;
@@ -871,7 +884,7 @@ function buildFormDataFromParts(parts: FormDataPart[]): FormData {
     if (part.kind === "file") {
       if (!part.uri) {
         errorLog(
-          `[NetworkAgent] ⚠️ Skipping file part "${part.name}" during replay — no local uri captured`
+          `⚠️ Skipping file part "${part.name}" during replay — no local uri captured`
         );
         return;
       }
@@ -1008,7 +1021,7 @@ function createTextSnippet(text: string, maxLen: number): string {
  */
 export function addAxiosInstance(axiosInstance: any) {
   if (!axiosInstance || !axiosInstance.interceptors) {
-    errorLog("[NetworkAgent] ❌ Invalid axios instance");
+    errorLog("❌ Invalid axios instance");
     return;
   }
   attachAxiosInterceptors(axiosInstance);
@@ -1057,7 +1070,7 @@ function attachAxiosInterceptors(instance: any) {
       const url = axiosRequestUrl(instance, config);
       const method = (config.method || "GET").toUpperCase();
       const requestHeaders = normalizeHeaders(config.headers);
-      debugLog(`[NetworkAgent] 🚀 [AXIOS] Capturing ${method} request:`, url.substring(0, 80));
+      debugLog(`🚀 [AXIOS] Capturing ${method} request:`, url.substring(0, 80));
 
       safeSend(socket, {
         type: "request",
@@ -1072,7 +1085,7 @@ function attachAxiosInterceptors(instance: any) {
       return config;
     },
     (error: any) => {
-      errorLog("[NetworkAgent] ❌ [AXIOS] Request error:", error);
+      errorLog("❌ [AXIOS] Request error:", error);
       return Promise.reject(error);
     }
   );
@@ -1136,8 +1149,8 @@ function attachAxiosInterceptors(instance: any) {
       if (handlers?.length > 1) handlers.unshift(handlers.pop());
     }
   } catch (e) {
-    debugLog("[NetworkAgent] ⚠️ Could not reorder interceptors:", e);
+    debugLog("⚠️ Could not reorder interceptors:", e);
   }
 
-  debugLog("[NetworkAgent] ✅ Axios interceptors configured");
+  debugLog("✅ Axios interceptors configured");
 }

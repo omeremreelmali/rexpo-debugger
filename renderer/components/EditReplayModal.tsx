@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { RequestState } from "../types";
 import { sendReplayCommand } from "../utils/replayRequest";
+import { formatJsonLossless } from "../utils/formatJson";
+import { joinUrl, QueryParam, splitUrl } from "../utils/queryString";
 import { useCollections } from "../state/CollectionsContext";
 import { useToast } from "./Toast";
 import { SaveRequestModal } from "./SaveRequestModal";
@@ -19,10 +21,8 @@ interface EditReplayModalProps {
   onClose: () => void;
 }
 
-interface KeyValueRow {
+interface KeyValueRow extends QueryParam {
   id: string;
-  key: string;
-  value: string;
   enabled: boolean;
 }
 
@@ -59,65 +59,23 @@ function rowsToHeaders(rows: KeyValueRow[]): Record<string, string> {
 }
 
 /**
- * Splits a URL into a base part (scheme + host + path) and an array of query
- * parameters. The fragment (#…) is preserved as part of the base.
- *
- * Falls back to "everything before the first ?" when URL parsing fails (e.g.
- * relative URLs captured from in-app routing).
+ * Splits a URL into its base (everything but the query, fragment included) and
+ * editable query rows. See utils/queryString for why this avoids the URL API.
  */
-function parseUrl(input: string): {
-  base: string;
-  params: KeyValueRow[];
-} {
-  if (!input) return { base: "", params: [] };
-  try {
-    const u = new URL(input);
-    const params: KeyValueRow[] = [];
-    u.searchParams.forEach((value, key) => {
-      params.push({ id: nextRowId("q"), key, value, enabled: true });
-    });
-    const base = `${u.origin}${u.pathname}${u.hash}`;
-    return { base, params };
-  } catch {
-    // relative URL or unparseable — split naively on first ?
-    const qIdx = input.indexOf("?");
-    if (qIdx < 0) return { base: input, params: [] };
-    const base = input.slice(0, qIdx);
-    const search = new URLSearchParams(input.slice(qIdx + 1));
-    const params: KeyValueRow[] = [];
-    search.forEach((value, key) => {
-      params.push({ id: nextRowId("q"), key, value, enabled: true });
-    });
-    return { base, params };
-  }
+function parseUrl(input: string): { base: string; params: KeyValueRow[] } {
+  const { base, params } = splitUrl(input);
+  return {
+    base,
+    params: params.map((p) => ({ ...p, id: nextRowId("q"), enabled: true })),
+  };
 }
 
 function buildUrl(base: string, params: KeyValueRow[]): string {
-  const active = params.filter((p) => p.enabled && p.key.trim().length > 0);
-  if (active.length === 0) return base;
-  const search = new URLSearchParams();
-  for (const p of active) {
-    search.append(p.key.trim(), p.value);
-  }
-  // Preserve fragment if base already has one (URLSearchParams string doesn't include ?)
-  const hashIdx = base.indexOf("#");
-  if (hashIdx >= 0) {
-    return `${base.slice(0, hashIdx)}?${search.toString()}${base.slice(hashIdx)}`;
-  }
-  return `${base}?${search.toString()}`;
+  return joinUrl(base, params.filter((p) => p.enabled));
 }
 
 function isSensitive(headerName: string): boolean {
   return SENSITIVE_HEADER_NAMES.includes(headerName.toLowerCase());
-}
-
-function tryPrettyJson(input: string): string {
-  if (!input) return "";
-  try {
-    return JSON.stringify(JSON.parse(input), null, 2);
-  } catch {
-    return input;
-  }
 }
 
 export function EditReplayModal({
@@ -140,14 +98,20 @@ export function EditReplayModal({
   const formParts = request.requestFormParts;
   const isMultipart = !!formParts?.length;
   const [body, setBody] = useState<string>(() =>
-    isMultipart ? "" : tryPrettyJson(request.requestBodySnippet || "")
+    // The captured body as sent. Formatting is left to the Pretty-print
+    // button, so an untouched replay sends exactly the original bytes.
+    isMultipart ? "" : request.requestBodySnippet || ""
   );
   const [revealedHeaderIds, setRevealedHeaderIds] = useState<Set<string>>(new Set());
 
   // Live preview of the resolved URL — what we'll actually send.
+  // While nothing in the URL was touched, send it exactly as captured.
   const resolvedUrl = useMemo(
-    () => buildUrl(baseUrl.trim(), queryParams),
-    [baseUrl, queryParams]
+    () =>
+      baseUrl === initialParsed.base && queryParams === initialParsed.params
+        ? request.url
+        : buildUrl(baseUrl.trim(), queryParams),
+    [baseUrl, queryParams, initialParsed, request.url]
   );
 
   // If the user pastes a full URL (with ?key=value) into the base field, peel
@@ -229,7 +193,7 @@ export function EditReplayModal({
     });
   };
 
-  const prettifyBody = () => setBody(tryPrettyJson(body));
+  const prettifyBody = () => setBody(formatJsonLossless(body));
 
   const handleSend = async () => {
     const sendsFormData = hasBody && isMultipart;

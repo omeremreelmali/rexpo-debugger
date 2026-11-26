@@ -29,7 +29,7 @@ if (process.argv[2] === "--agent-child") {
   global.__DEV__ = true;
   const ws = "ws://127.0.0.1:5051";
   const { initNetworkAgent, addAxiosInstance } = require(`${agentDir}/agent.js`);
-  const { initConsoleAgent } = require(`${agentDir}/console-agent.js`);
+  const { initConsoleAgent, restoreConsole } = require(`${agentDir}/console-agent.js`);
   const { initStateAgent } = require(`${agentDir}/state-agent.js`);
   const axiosModule = require(path.join(ROOT, "node_modules/axios"));
   const axios = axiosModule.default || axiosModule;
@@ -46,6 +46,15 @@ if (process.argv[2] === "--agent-child") {
       return Promise.race([fetch(`${host}/sse`).then(() => "resolved"), sleep(3000).then(() => "pending")]);
     },
     post: ({ p, body }) => fetch(host + p, { method: "POST", body, headers: { "content-type": "application/json" } }).then(() => true),
+    async reinit() {
+      restoreConsole();
+      initConsoleAgent({ wsUrl: ws });
+      await sleep(2500);
+      console.log("after-reinit");
+    },
+    async restore() {
+      restoreConsole();
+    },
     async axios() {
       const client = axios.create({ baseURL: host });
       addAxiosInstance(client);
@@ -58,6 +67,43 @@ if (process.argv[2] === "--agent-child") {
     process.send({ id, result });
   });
   process.send({ ready: true });
+  return;
+}
+
+// ─── Child: agents started while no desktop is listening ─────────────────────
+if (process.argv[2] === "--quiet-child") {
+  const [, , , agentDir, port] = process.argv;
+  const printed = { log: [], warn: [], error: [] };
+  const text = (args) => args.map(String).join(" ");
+  console.log = console.info = console.debug = (...a) => printed.log.push(text(a));
+  console.warn = (...a) => printed.warn.push(text(a));
+  console.error = (...a) => printed.error.push(text(a));
+  global.__DEV__ = true;
+  const wsUrl = `ws://127.0.0.1:${port}`;
+  const { initNetworkAgent } = require(`${agentDir}/agent.js`);
+  const { initConsoleAgent } = require(`${agentDir}/console-agent.js`);
+  const { initStateAgent } = require(`${agentDir}/state-agent.js`);
+  initNetworkAgent({ wsUrl });
+  initConsoleAgent({ wsUrl });
+  initStateAgent({ wsUrl });
+  (async () => {
+    await sleep(3500); // several failed attempts at 0s, 1s and 3s
+    const away = JSON.parse(JSON.stringify(printed));
+    // Now the desktop appears: what the console agent delivers is what the
+    // inspector would show as the app's own logs.
+    const consoleFrames = [];
+    const server = new (require("ws").WebSocketServer)({ port: Number(port) });
+    server.on("connection", (c) =>
+      c.on("message", (d) => {
+        const m = JSON.parse(d);
+        if (m.type === "console") consoleFrames.push(text(m.args ?? []));
+      })
+    );
+    await sleep(6000);
+    server.close();
+    process.send({ away, consoleFrames });
+    process.exit(0);
+  })();
   return;
 }
 
@@ -206,9 +252,23 @@ const origin = http.createServer((q, s) => {
   });
 });
 
+const agentDir = path.join(TMP, "agent");
+
+async function quietChecks() {
+  out("\n# Agents with no desktop running");
+  const probe = net.createServer();
+  await new Promise((r) => probe.listen(0, "127.0.0.1", r));
+  const port = probe.address().port;
+  await new Promise((r) => probe.close(r));
+  const child = fork(__filename, ["--quiet-child", agentDir, String(port)], { silent: true });
+  const { away, consoleFrames } = await new Promise((r) => child.once("message", r));
+  check("agents never call console.error while the desktop is away", away.error.length === 0, away.error.slice(0, 2));
+  const agentLines = [...away.log, ...away.warn].filter((l) => /Agent\]/.test(l));
+  check("each agent prints at most one line per outage", agentLines.length <= 3, agentLines.slice(0, 4));
+  check("agent messages are not forwarded as app logs", !consoleFrames.some((l) => /Agent\]/.test(l)), consoleFrames.slice(0, 3));
+}
+
 async function agentChecks() {
-  const agentDir = path.join(TMP, "agent");
-  execSync(`npx tsc --outDir "${agentDir}"`, { cwd: path.join(ROOT, "expo-agent"), stdio: "ignore" });
   const host = `http://127.0.0.1:${origin.address().port}`;
   const child = fork(__filename, ["--agent-child", agentDir, host], { silent: true });
   await new Promise((r) => child.once("message", r));
@@ -273,6 +333,21 @@ async function agentChecks() {
   const axOk = await rowText("/\\/ax\\?/");
   check("axios URL includes params", axOk.some((r) => r.includes("/ax?q=1")), axOk);
   check("axios requests carry no injected header", !seen["/ax?q=1"]?.headers["x-network-inspector-id"]);
+
+  const connected = () => ev(`window.electron.getConnectionInfo().then(i=>i.connectedClients)`);
+  const consoleRows = (match) =>
+    ev(`[...document.querySelectorAll('.console-row')].filter(r=>${match}.test(r.textContent)).length`);
+  const sockets = await connected();
+  await call("reinit");
+  await sleep(300);
+  check("console agent re-init leaves one socket", (await connected()) === sockets, `${sockets} -> ${await connected()}`);
+  await tab("console");
+  await sleep(150);
+  check("console logs arrive after re-init", (await consoleRows("/after-reinit/")) === 1, await consoleRows("/after-reinit/"));
+  await tab("network");
+  await call("restore");
+  await sleep(2500);
+  check("restoreConsole stops reconnecting", (await connected()) === sockets - 1, `${sockets} -> ${await connected()}`);
 
   child.kill();
   await sleep(300);
@@ -348,6 +423,44 @@ async function clientChecks() {
   check("saved replay goes to one device, not all", d1.got.length + d2.got.length === 1, [d1.got.length, d2.got.length]);
   d1.close();
   d2.close();
+
+  out("\n# Edit & Replay keeps an untouched request");
+  const exactUrl = "myapp://host/path?ids=1,2,3&flag&q=a%20b";
+  const exactBody = '{"id":9007199254740993,"price":10.50}';
+  await ev(`localStorage.setItem('rexpo-debugger-collections', ${JSON.stringify(JSON.stringify({ savedRequests: [{ id: "e1", method: "POST", url: exactUrl, headers: { "content-type": "application/json" }, body: exactBody, createdAt: new Date().toISOString() }], collections: [] }))})`);
+  await reload();
+  const e = await client();
+  await tab("collections");
+  await sleep(200);
+  await ev(`document.querySelector('.collections-item').click()`);
+  await sleep(150);
+  await ev(`[...document.querySelectorAll('.saved-details-action')].find(b=>/Edit & Replay/.test(b.textContent)).click()`);
+  await sleep(200);
+  await ev(`document.querySelector('.edit-replay-send').click()`);
+  await sleep(300);
+  const sent = e.got.find((m) => m.command === "replay_request")?.payload ?? {};
+  check("custom-scheme URL and its query are sent unchanged", sent.url === exactUrl, sent.url);
+  check("JSON body keeps large and trailing-zero numbers", sent.body === exactBody, sent.body);
+  e.close();
+
+  out("\n# Saved collections survive bad storage");
+  await ev(`Object.keys(localStorage).filter(k=>k.startsWith('rexpo-debugger-collections.backup')).forEach(k=>localStorage.removeItem(k))`);
+  await ev(`localStorage.setItem('rexpo-debugger-collections', '{broken')`);
+  await reload();
+  await sleep(300);
+  check("unreadable collections are not overwritten", (await ev(`localStorage.getItem('rexpo-debugger-collections')`)) === "{broken");
+  check("unreadable collections are backed up", (await ev(`Object.keys(localStorage).filter(k=>k.startsWith('rexpo-debugger-collections.backup')).map(k=>localStorage.getItem(k))`)).includes("{broken"));
+  const toastCount = (re) => ev(`[...document.querySelectorAll('.toast')].filter(t=>${re}.test(t.innerText)).length`);
+  check("unreadable collections are reported once", (await toastCount("/could not be read/")) === 1, await toasts());
+  await ev(`localStorage.setItem('rexpo-debugger-collections', ${JSON.stringify(JSON.stringify({ savedRequests: [{ id: "ok", method: "GET", url: "https://example.test/ok", collectionName: "c", createdAt: "t" }, { id: "bad", method: 5 }, "junk", { id: "odd", method: "GET", url: "https://example.test/odd", collectionName: 7, tags: "x", headers: { a: 1 } }], collections: ["c", 3] }))})`);
+  pageErrors = [];
+  await reload();
+  await tab("collections");
+  await sleep(300);
+  check("damaged entries are skipped without crashing", (await alive()) && pageErrors.length === 0 && (await ev(`document.querySelectorAll('.collections-item').length`)) === 2, pageErrors[0] ?? (await ev(`document.querySelectorAll('.collections-item').length`)));
+  check("skipped entries are reported once", (await toastCount("/2 damaged saved requests/")) === 1, await toasts());
+  await ev(`Object.keys(localStorage).filter(k=>k.startsWith('rexpo-debugger-collections')).forEach(k=>localStorage.removeItem(k))`);
+  await tab("network");
   await tab("network");
 
   out("\n# Connection policy");
@@ -366,6 +479,21 @@ async function clientChecks() {
   check("Origin naming the dialed host (React Native) is accepted", await connects(`ws://${lan}:5051`, { origin: `http://${lan}:5051` }));
   check("localhost Origin (Expo web) is accepted", await connects("ws://127.0.0.1:5051", { origin: "http://localhost:8081" }));
   check("agent kind query string is accepted", await connects("ws://127.0.0.1:5051/?agent=network"));
+  await new Promise((resolve) => {
+    const sock = net.connect(5051, "127.0.0.1", () =>
+      sock.write(
+        "GET http://[ HTTP/1.1\r\nHost: 127.0.0.1:5051\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
+          "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n"
+      )
+    );
+    sock.on("error", () => {});
+    setTimeout(() => {
+      sock.destroy();
+      resolve();
+    }, 500);
+  });
+  check("a malformed upgrade URL does not stop the server", await connects("ws://127.0.0.1:5051"));
+  check("a malformed upgrade URL leaves the window responsive", await alive());
 
   out("\n# Malformed messages");
   const bad = [
@@ -450,6 +578,8 @@ async function portChecks(profile) {
   }, 360000);
   await new Promise((r) => origin.listen(0, r));
   const profile = path.join(TMP, "main");
+  execSync(`npx tsc --outDir "${agentDir}"`, { cwd: path.join(ROOT, "expo-agent"), stdio: "ignore" });
+  await quietChecks();
   launch(profile);
   await attach();
   await agentChecks();
