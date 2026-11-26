@@ -8,7 +8,7 @@
 | Parça | Sürüm | Nerede | Tarih |
 | --- | --- | --- | --- |
 | Masaüstü uygulaması | **v1.9.2** | [GitHub Release](https://github.com/omeremreelmali/rexpo-debugger/releases/tag/v1.9.2) | 2026-11-26 |
-| Agent (`rexpo-debugger`) | **1.5.1** yayında, **1.5.2 hazır ama henüz npm'e gönderilmedi** | [npm](https://www.npmjs.com/package/rexpo-debugger) | 1.5.1: 2026-11-05 |
+| Agent (`rexpo-debugger`) | **1.5.2** | [npm](https://www.npmjs.com/package/rexpo-debugger) (`latest`) | 2026-11-26 |
 | Web sitesi | 1.9.2'yi gösteriyor | https://rexpo.redvizor.app (`lib/release.ts` → `LATEST_VERSION = "1.9.2"`) | 2026-11-26 |
 
 ### Release dosyaları (v1.9.2)
@@ -34,7 +34,7 @@
 - Pretty-print, cURL dışa aktarma ve "Save response", büyük sayıları (`9007199254740993`) ve sondaki sıfırları (`10.50`) koruyor.
 - Yeni uygulama ikonu: terminal tasarımına uygun siyah panel, yeşil parıltılı "R", HUD ızgarası ve köşe çizgileri. Apple ikon ızgarasına uyuyor, Dock'ta artık büyük görünmüyor.
 
-### Agent 1.5.2 (kodda ve GitHub'da; npm'e gönderilmeyi bekliyor)
+### Agent 1.5.2
 
 - Masaüstü kapalıyken her agent her denemede hata basmak yerine kesinti başına tek satır yazıyor. `console.error` kullanmıyor, bu yüzden React Native'de kırmızı LogBox çıkmıyor.
 - Agent'ların kendi mesajları artık uygulama logu olarak yakalanmıyor.
@@ -43,4 +43,4 @@
 
 ## Henüz yayınlanmayanlar
 
-- Agent `rexpo-debugger` 1.5.2 npm'e gönderilmedi. npm oturumu gerektiği için kullanıcı yayınlayacak: `cd expo-agent && npm login && npm publish --access public`.
+- Yok. Kod, GitHub sürümü, npm ve site 1.9.2 / 1.5.2 ile aynı durumda.
